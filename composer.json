@@ -1,0 +1,14 @@
+{
+    "name": "mailinglist/app",
+    "description": "Self-contained PHP mailing list with admin-gated registration",
+    "type": "project",
+    "require": {
+        "php": ">=8.2",
+        "vlucas/phpdotenv": "^5.6"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        }
+    }
+}
