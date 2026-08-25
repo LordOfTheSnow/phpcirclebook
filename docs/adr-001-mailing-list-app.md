@@ -1,8 +1,8 @@
-# ADR-001: PHP Mailing List Application
+# ADR-001: PHPCircleBook Application
 
 **Status:** Accepted  
 **Date:** 2026-08-24  
-**Context:** Build a self-contained PHP application that manages a list of email recipients with admin-gated registration and self-service list retrieval.
+**Context:** Build a self-contained PHP application (PHPCircleBook) that manages a contact directory with admin-gated registration and self-service list retrieval.
 
 ---
 

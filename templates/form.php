@@ -1,22 +1,22 @@
 <form method="post" action="?action=submit">
     <fieldset>
         <label for="email">
-            Email address
-            <input type="email" id="email" name="email" placeholder="you@example.com" required>
+            <?= __('form.email_label') ?>
+            <input type="email" id="email" name="email" placeholder="<?= htmlspecialchars(__('form.email_placeholder')) ?>" required>
         </label>
 
         <label for="name">
-            Name (optional)
-            <input type="text" id="name" name="name" placeholder="Your Name">
+            <?= __('form.name_label') ?>
+            <input type="text" id="name" name="name" placeholder="<?= htmlspecialchars(__('form.name_placeholder')) ?>">
         </label>
 
         <!-- Honeypot field — hidden from humans -->
         <div style="position:absolute;left:-9999px;" aria-hidden="true">
-            <label for="website">Leave this empty</label>
+            <label for="website"><?= __('form.honeypot_label') ?></label>
             <input type="text" id="website" name="website" tabindex="-1" autocomplete="off">
         </div>
 
-        <button type="submit">Send me the list</button>
+        <button type="submit"><?= __('form.submit') ?></button>
     </fieldset>
 </form>
-<p><small>Enter your email to receive the recipient list. If you're not yet registered, your request will be forwarded to the administrator for approval.</small></p>
+<p><small><?= __('form.explanation') ?></small></p>

@@ -1,13 +1,13 @@
 <article>
-    <h2>Unsubscribe</h2>
-    <p>Are you sure you want to unsubscribe <strong><?= htmlspecialchars($email) ?></strong> from <?= htmlspecialchars($appName) ?>?</p>
-    <p>You will no longer appear in the recipient list and will not be able to request it.</p>
+    <h2><?= __('unsubscribe.heading') ?></h2>
+    <p><?= __('unsubscribe.confirm', ['email' => '<strong>' . htmlspecialchars($email) . '</strong>', 'appName' => htmlspecialchars($appName)]) ?></p>
+    <p><?= __('unsubscribe.warning') ?></p>
 
     <form method="post" action="?action=confirm-unsubscribe">
         <input type="hidden" name="email" value="<?= htmlspecialchars($email) ?>">
         <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
-        <button type="submit">Yes, unsubscribe me</button>
+        <button type="submit"><?= __('unsubscribe.submit') ?></button>
     </form>
 
-    <p><a href="<?= htmlspecialchars($appUrl) ?>">&larr; No, take me back</a></p>
+    <p><a href="<?= htmlspecialchars($appUrl) ?>">&larr; <?= __('unsubscribe.cancel') ?></a></p>
 </article>

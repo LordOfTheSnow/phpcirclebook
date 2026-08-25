@@ -18,7 +18,7 @@ final class Mailer
      */
     public function sendList(string $toEmail, array $recipients): bool
     {
-        $body = "Here is the current recipient list for {$this->appName}:\n\n";
+        $body = __('mail.list_intro', ['appName' => $this->appName]) . "\n\n";
 
         foreach ($recipients as $r) {
             if (!empty($r['name'])) {
@@ -29,11 +29,11 @@ final class Mailer
         }
 
         $body .= "\n---\n";
-        $body .= "Total: " . count($recipients) . " recipient(s)\n\n";
-        $body .= "To unsubscribe from this list:\n";
+        $body .= __('mail.list_total', ['count' => count($recipients)]) . "\n\n";
+        $body .= __('mail.list_unsubscribe') . "\n";
         $body .= $this->buildUnsubscribeUrl($toEmail) . "\n";
 
-        $subject = "[{$this->appName}] Recipient List";
+        $subject = __('mail.list_subject', ['appName' => $this->appName]);
         return $this->send($toEmail, $subject, $body);
     }
 
@@ -44,18 +44,18 @@ final class Mailer
     {
         $displayName = $name ? "{$name} ({$email})" : $email;
 
-        $body = "A new registration request for {$this->appName}:\n\n";
-        $body .= "Email: {$email}\n";
+        $body = __('mail.approval_intro', ['appName' => $this->appName]) . "\n\n";
+        $body .= __('mail.approval_email', ['email' => $email]) . "\n";
         if ($name) {
-            $body .= "Name: {$name}\n";
+            $body .= __('mail.approval_name', ['name' => $name]) . "\n";
         }
         $body .= "\n";
-        $body .= "Approve:\n";
+        $body .= __('mail.approval_approve') . "\n";
         $body .= "{$this->appUrl}?action=approve&token={$token}\n\n";
-        $body .= "Reject:\n";
+        $body .= __('mail.approval_reject') . "\n";
         $body .= "{$this->appUrl}?action=reject&token={$token}\n";
 
-        $subject = "[{$this->appName}] Approval needed: {$displayName}";
+        $subject = __('mail.approval_subject', ['appName' => $this->appName, 'displayName' => $displayName]);
         return $this->send($this->adminEmail, $subject, $body);
     }
 
@@ -64,16 +64,18 @@ final class Mailer
      */
     public function sendApprovalConfirmation(string $toEmail, ?string $name): bool
     {
-        $greeting = $name ? "Hi {$name}" : "Hi";
+        $greeting = $name
+            ? __('mail.confirm_greeting', ['name' => $name])
+            : __('mail.confirm_greeting_anon');
 
         $body = "{$greeting},\n\n";
-        $body .= "Your registration for {$this->appName} has been approved.\n\n";
-        $body .= "You can now visit the following page and request the recipient list at any time:\n";
+        $body .= __('mail.confirm_body', ['appName' => $this->appName]) . "\n\n";
+        $body .= __('mail.confirm_instructions') . "\n";
         $body .= "{$this->appUrl}\n\n";
-        $body .= "To unsubscribe:\n";
+        $body .= __('mail.confirm_unsub') . "\n";
         $body .= $this->buildUnsubscribeUrl($toEmail) . "\n";
 
-        $subject = "[{$this->appName}] Registration approved";
+        $subject = __('mail.confirm_subject', ['appName' => $this->appName]);
         return $this->send($toEmail, $subject, $body);
     }
 

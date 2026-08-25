@@ -1,6 +1,6 @@
 # Glossary
 
-Domain terms used throughout the mailing list application.
+Domain terms used throughout PHPCircleBook.
 
 ---
 
@@ -60,3 +60,31 @@ An email sent to a recipient after admin approval, informing them that their reg
 
 **HMAC Secret**  
 A server-side secret key (`HMAC_SECRET` in `.env`) used to generate and verify unsubscribe tokens. Must be kept confidential; rotating it invalidates all existing unsubscribe links.
+
+---
+
+## Internationalisation (i18n)
+
+**Locale**  
+A combination of language and region expressed as an ICU locale code (e.g. `de_DE`, `en_US`). Configured per instance via `APP_LOCALE` in `.env`. Determines both the translation file used and the formatting rules for dates and numbers.
+
+**Language File**  
+A PHP file in the `lang/` directory (e.g. `lang/de.php`) that returns an associative array mapping dot-namespaced translation keys to translated strings. One file per locale.
+
+**Translation Key**  
+A dot-namespaced identifier used to look up a translated string (e.g. `form.submit`, `mail.list_subject`). Grouped by context: `form.*` (UI labels), `message.*` (controller messages), `mail.*` (email content).
+
+**Fallback Locale**  
+English (`en`). When a key is missing from the configured locale's language file, the English value is used instead. Ensures the application always renders meaningful text.
+
+**Translator**  
+A PHP class (`App\Translator`) responsible for loading language files, resolving fallback, and interpolating placeholders. Exposed globally via the `__()` helper function.
+
+**`__()` (Double-Underscore Function)**  
+A global helper function that translates a key and optionally interpolates placeholder values. Signature: `__('key', ['placeholder' => 'value'])`. Delegates to the `Translator` singleton.
+
+**Placeholder Token**  
+A `{name}`-style token inside a translation string that gets replaced at runtime with a dynamic value using `strtr`. Example: `'Total: {count} recipient(s)'`.
+
+**IntlDateFormatter / NumberFormatter**  
+PHP `intl` extension classes used for locale-aware date and number formatting. Configured with the full `APP_LOCALE` value to respect regional conventions (e.g. `25.08.2026` in German vs `08/25/2026` in American English).

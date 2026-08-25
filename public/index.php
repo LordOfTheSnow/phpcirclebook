@@ -3,24 +3,30 @@
 declare(strict_types=1);
 
 require __DIR__ . '/../vendor/autoload.php';
+require __DIR__ . '/../src/helpers.php';
 
 use App\Database;
 use App\Mailer;
 use App\RateLimiter;
 use App\TokenService;
+use App\Translator;
 use Dotenv\Dotenv;
 
 // --- Bootstrap ---
 
 $dotenv = Dotenv::createImmutable(dirname(__DIR__));
 $dotenv->load();
-$dotenv->required(['APP_NAME', 'APP_URL', 'ADMIN_EMAIL', 'HMAC_SECRET', 'DB_PATH']);
+$dotenv->required(['APP_NAME', 'APP_URL', 'ADMIN_EMAIL', 'HMAC_SECRET', 'DB_PATH', 'APP_LOCALE']);
 
 $appName = $_ENV['APP_NAME'];
 $appUrl = rtrim($_ENV['APP_URL'], '/');
 $adminEmail = $_ENV['ADMIN_EMAIL'];
 $hmacSecret = $_ENV['HMAC_SECRET'];
 $dbPath = dirname(__DIR__) . '/' . $_ENV['DB_PATH'];
+$appLocale = $_ENV['APP_LOCALE'];
+
+// Initialise translator
+Translator::init($appLocale, dirname(__DIR__) . '/lang');
 
 $db = new Database($dbPath);
 $tokenService = new TokenService($hmacSecret);
@@ -65,7 +71,7 @@ function handleSubmit(): void
     // Honeypot check
     if (!empty($_POST['website'] ?? '')) {
         // Bot detected — show generic message
-        renderMessage("Thank you. If your address is eligible you'll receive an email shortly.");
+        renderMessage(__('message.generic_thanks'));
         return;
     }
 
@@ -73,7 +79,7 @@ function handleSubmit(): void
     $name = trim($_POST['name'] ?? '') ?: null;
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        renderMessage("Please enter a valid email address.");
+        renderMessage(__('message.invalid_email'));
         return;
     }
 
@@ -81,7 +87,7 @@ function handleSubmit(): void
 
     // Rate limiting
     if ($rateLimiter->isIpLimited($ip) || $rateLimiter->isEmailLimited($email)) {
-        renderMessage("Too many requests. Please try again later.");
+        renderMessage(__('message.rate_limited'));
         return;
     }
 
@@ -95,15 +101,15 @@ function handleSubmit(): void
         $expires = $tokenService->approvalTokenExpiry();
         $db->createRecipient($email, $name, $token, $expires);
         $mailer->sendApprovalRequest($email, $name, $token);
-        renderMessage("Thank you. If your address is eligible you'll receive an email shortly.");
+        renderMessage(__('message.generic_thanks'));
         return;
     }
 
     match ($recipient['status']) {
         'approved' => handleSendList($email),
-        'rejected' => renderMessage("Thank you. If your address is eligible you'll receive an email shortly."),
+        'rejected' => renderMessage(__('message.generic_thanks')),
         'pending' => handleResubmit($email, $name, $recipient),
-        default => renderMessage("Thank you. If your address is eligible you'll receive an email shortly."),
+        default => renderMessage(__('message.generic_thanks')),
     };
 }
 
@@ -113,7 +119,7 @@ function handleSendList(string $email): void
 
     $recipients = $db->getApprovedRecipients();
     $mailer->sendList($email, $recipients);
-    renderMessage("The list has been sent to your email address.");
+    renderMessage(__('message.list_sent'));
 }
 
 function handleResubmit(string $email, ?string $name, array $existing): void
@@ -125,7 +131,7 @@ function handleResubmit(string $email, ?string $name, array $existing): void
     $expires = $tokenService->approvalTokenExpiry();
     $db->updateRecipientToken($email, $token, $expires);
     $mailer->sendApprovalRequest($email, $name ?? $existing['name'], $token);
-    renderMessage("Thank you. If your address is eligible you'll receive an email shortly.");
+    renderMessage(__('message.generic_thanks'));
 }
 
 function handleApprove(): void
@@ -134,19 +140,19 @@ function handleApprove(): void
 
     $token = $_GET['token'] ?? '';
     if ($token === '') {
-        renderMessage("Invalid or expired link.");
+        renderMessage(__('message.invalid_link'));
         return;
     }
 
     $recipient = $db->findRecipientByToken($token);
     if ($recipient === null) {
-        renderMessage("Invalid or expired link.");
+        renderMessage(__('message.invalid_link'));
         return;
     }
 
     $db->approveRecipient((int) $recipient['id']);
     $mailer->sendApprovalConfirmation($recipient['email'], $recipient['name']);
-    renderMessage("Approved! {$recipient['email']} has been added to the list and notified.");
+    renderMessage(__('message.approved', ['email' => $recipient['email']]));
 }
 
 function handleReject(): void
@@ -155,18 +161,18 @@ function handleReject(): void
 
     $token = $_GET['token'] ?? '';
     if ($token === '') {
-        renderMessage("Invalid or expired link.");
+        renderMessage(__('message.invalid_link'));
         return;
     }
 
     $recipient = $db->findRecipientByToken($token);
     if ($recipient === null) {
-        renderMessage("Invalid or expired link.");
+        renderMessage(__('message.invalid_link'));
         return;
     }
 
     $db->rejectRecipient((int) $recipient['id']);
-    renderMessage("Rejected. {$recipient['email']} has been silently denied.");
+    renderMessage(__('message.rejected', ['email' => $recipient['email']]));
 }
 
 function handleUnsubscribe(): void
@@ -177,7 +183,7 @@ function handleUnsubscribe(): void
     $token = $_GET['token'] ?? '';
 
     if ($email === '' || $token === '' || !$tokenService->verifyUnsubscribeToken($email, $token)) {
-        renderMessage("Invalid unsubscribe link.");
+        renderMessage(__('message.invalid_unsub'));
         return;
     }
 
@@ -197,12 +203,12 @@ function handleConfirmUnsubscribe(): void
     $token = $_POST['token'] ?? '';
 
     if ($email === '' || $token === '' || !$tokenService->verifyUnsubscribeToken($email, $token)) {
-        renderMessage("Invalid unsubscribe link.");
+        renderMessage(__('message.invalid_unsub'));
         return;
     }
 
     $db->deleteRecipientByEmail($email);
-    renderMessage("You have been unsubscribed. You can re-register at any time.");
+    renderMessage(__('message.unsubscribed'));
 }
 
 // --- Helpers ---

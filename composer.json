@@ -1,9 +1,10 @@
 {
-    "name": "mailinglist/app",
-    "description": "Self-contained PHP mailing list with admin-gated registration",
+    "name": "phpcirclebook/app",
+    "description": "Self-contained PHP contact directory with admin-gated registration",
     "type": "project",
     "require": {
         "php": ">=8.2",
+        "ext-intl": "*",
         "vlucas/phpdotenv": "^5.6"
     },
     "autoload": {
