@@ -3,6 +3,12 @@
 declare(strict_types=1);
 
 return [
+    // --- Info card (templates/form.php) ---
+    'info.title'             => 'What is this?',
+    'info.intro'             => 'This app manages a shared mailing list.',
+    'info.how_it_works'      => 'Enter your email address to request the current list of recipients. If you are not yet a member, an administrator will review your request. Once approved, you can request the list at any time or unsubscribe whenever you like.',
+    'info.contact'           => 'Something not working? <a href="mailto:{email}">Contact the administrator</a>.',
+
     // --- Form (templates/form.php) ---
     'form.email_label'       => 'Email address',
     'form.email_placeholder' => 'you@example.com',
@@ -38,6 +44,8 @@ return [
     'mail.list_intro'        => 'Here is the current recipient list for {appName}:',
     'mail.list_total'        => 'Total: {count} recipient(s)',
     'mail.list_unsubscribe'  => 'To unsubscribe from this list:',
+
+    'mail.csv_header_registered' => 'Registered',
 
     // --- Email: Approval request to admin ---
     'mail.approval_subject'  => '[{appName}] Approval needed: {displayName}',

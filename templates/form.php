@@ -1,3 +1,13 @@
+<article>
+    <header><strong><?= __('info.title') ?></strong></header>
+    <p><?= __('info.intro') ?></p>
+    <?php if (!empty($appDescription)): ?>
+        <p><?= htmlspecialchars($appDescription) ?></p>
+    <?php endif; ?>
+    <p><?= __('info.how_it_works') ?></p>
+    <footer><small><?= __('info.contact', ['email' => obfuscateEmail($adminEmail)]) ?></small></footer>
+</article>
+
 <form method="post" action="?action=submit">
     <fieldset>
         <label for="email">

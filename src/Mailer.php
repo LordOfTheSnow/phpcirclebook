@@ -33,8 +33,11 @@ final class Mailer
         $body .= __('mail.list_unsubscribe') . "\n";
         $body .= $this->buildUnsubscribeUrl($toEmail) . "\n";
 
+        // Build CSV attachment
+        $csv = $this->buildRecipientCsv($recipients);
+
         $subject = __('mail.list_subject', ['appName' => $this->appName]);
-        return $this->send($toEmail, $subject, $body);
+        return $this->sendWithAttachment($toEmail, $subject, $body, $csv, 'members.csv');
     }
 
     /**
@@ -83,6 +86,60 @@ final class Mailer
     {
         $token = $this->tokenService->generateUnsubscribeToken($email);
         return "{$this->appUrl}?action=unsubscribe&email=" . urlencode($email) . "&token={$token}";
+    }
+
+    /**
+     * Build a CSV string from the recipients list.
+     */
+    private function buildRecipientCsv(array $recipients): string
+    {
+        $handle = fopen('php://memory', 'r+');
+        fputcsv($handle, ['Email', 'Name', __('mail.csv_header_registered')]);
+
+        foreach ($recipients as $r) {
+            $registeredAt = '';
+            if (!empty($r['created_at'])) {
+                $ts = strtotime($r['created_at']);
+                $registeredAt = $ts !== false ? formatDate($ts) : $r['created_at'];
+            }
+            fputcsv($handle, [$r['email'], $r['name'] ?? '', $registeredAt]);
+        }
+
+        rewind($handle);
+        $csv = stream_get_contents($handle);
+        fclose($handle);
+
+        return $csv;
+    }
+
+    /**
+     * Send an email with a file attachment using multipart/mixed MIME.
+     */
+    private function sendWithAttachment(string $to, string $subject, string $body, string $attachmentContent, string $attachmentFilename): bool
+    {
+        $boundary = md5(uniqid((string) time()));
+
+        $headers = [
+            "From: {$this->appName} <{$this->adminEmail}>",
+            "Reply-To: {$this->adminEmail}",
+            "MIME-Version: 1.0",
+            "Content-Type: multipart/mixed; boundary=\"{$boundary}\"",
+        ];
+
+        $message = "--{$boundary}\r\n";
+        $message .= "Content-Type: text/plain; charset=UTF-8\r\n";
+        $message .= "Content-Transfer-Encoding: 8bit\r\n\r\n";
+        $message .= $body . "\r\n\r\n";
+
+        $message .= "--{$boundary}\r\n";
+        $message .= "Content-Type: text/csv; charset=UTF-8; name=\"{$attachmentFilename}\"\r\n";
+        $message .= "Content-Disposition: attachment; filename=\"{$attachmentFilename}\"\r\n";
+        $message .= "Content-Transfer-Encoding: base64\r\n\r\n";
+        $message .= chunk_split(base64_encode($attachmentContent)) . "\r\n";
+
+        $message .= "--{$boundary}--\r\n";
+
+        return mail($to, $subject, $message, implode("\r\n", $headers));
     }
 
     private function send(string $to, string $subject, string $body): bool

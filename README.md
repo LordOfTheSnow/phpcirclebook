@@ -7,7 +7,10 @@ Members of a group (alumni, clubs, communities) can apply to join. Once approved
 ## Features
 
 - Admin-gated registration via email approval links
-- Self-service list retrieval for approved recipients
+- Self-service list retrieval for approved recipients (with CSV attachment)
+- Configurable info card on the main page (via `APP_DESCRIPTION` in `.env`)
+- Obfuscated admin contact email (anti-harvesting)
+- CLI import tool for bulk-adding existing members
 - Unsubscribe with confirmation page
 - Bot protection (honeypot + rate limiting)
 - Internationalised — ships with English and German, easy to add more
@@ -45,6 +48,7 @@ ADMIN_EMAIL="admin@example.com"
 HMAC_SECRET="generate-a-long-random-string-here"
 DB_PATH="data/mailinglist.db"
 APP_LOCALE="en_US"
+APP_DESCRIPTION="Describe your mailing list here. This text is shown to visitors on the main page."
 ```
 
 Generate a secure HMAC secret:
@@ -71,6 +75,7 @@ Point your web server's document root to the `public/` directory.
 | `HMAC_SECRET` | Secret key for unsubscribe token generation |
 | `DB_PATH` | Path to SQLite database file (relative to project root) |
 | `APP_LOCALE` | ICU locale code (e.g. `de_DE`, `en_US`, `fr_FR`) |
+| `APP_DESCRIPTION` | Custom text shown on the info card (optional, can be left empty) |
 
 ## Localisation
 
@@ -105,10 +110,40 @@ src/Mailer.php        Email composition and sending
 src/RateLimiter.php   Per-IP and per-email throttling
 src/TokenService.php  Approval + unsubscribe token generation
 src/Translator.php    Translation loader with fallback
-src/helpers.php       Global __(), formatDate(), formatNumber()
+src/helpers.php       Global __(), formatDate(), formatNumber(), obfuscateEmail()
 templates/            PHP templates (form, layout, message, unsubscribe)
 lang/                 Translation files (one PHP array per locale)
+bin/import.php        CLI: bulk-import members from a semicolon-separated file
+bin/reset-ratelimit.php  CLI: clear all rate limit entries
 data/                 SQLite database (auto-created on first use)
+```
+
+## CLI Tools
+
+### Import members
+
+Bulk-import an existing member list:
+
+```bash
+php bin/import.php members.txt
+```
+
+File format (one entry per line, `#` lines are comments):
+
+```
+alice@example.com;Alice Müller
+bob@example.com;Bob
+carol@example.com;
+```
+
+Imported members are set to "approved" status. Duplicates are skipped and reported.
+
+### Reset rate limits
+
+If you lock yourself out during testing:
+
+```bash
+php bin/reset-ratelimit.php
 ```
 
 ## About the name

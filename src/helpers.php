@@ -59,3 +59,18 @@ function formatNumber(
 
     return $formatter->format($value);
 }
+
+/**
+ * Obfuscate an email address by encoding each character as an HTML numeric entity.
+ *
+ * This deters simple regex-based email harvesters while remaining fully readable
+ * and clickable for humans (browsers decode entities transparently).
+ */
+function obfuscateEmail(string $email): string
+{
+    $output = '';
+    for ($i = 0, $len = strlen($email); $i < $len; $i++) {
+        $output .= '&#' . ord($email[$i]) . ';';
+    }
+    return $output;
+}

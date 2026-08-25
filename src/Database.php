@@ -77,7 +77,7 @@ final class Database
 
     public function getApprovedRecipients(): array
     {
-        $stmt = $this->pdo->query("SELECT email, name FROM recipients WHERE status = 'approved' ORDER BY name, email");
+        $stmt = $this->pdo->query("SELECT email, name, created_at FROM recipients WHERE status = 'approved' ORDER BY name, email");
         return $stmt->fetchAll();
     }
 
@@ -92,6 +92,21 @@ final class Database
             'name' => $name,
             'token' => $token,
             'expires' => $expiresAt,
+        ]);
+    }
+
+    /**
+     * Create a recipient with "approved" status (used for imports).
+     */
+    public function createApprovedRecipient(string $email, ?string $name): void
+    {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO recipients (email, name, status)
+            VALUES (:email, :name, 'approved')
+        ");
+        $stmt->execute([
+            'email' => $email,
+            'name' => $name,
         ]);
     }
 

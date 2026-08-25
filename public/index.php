@@ -24,6 +24,7 @@ $adminEmail = $_ENV['ADMIN_EMAIL'];
 $hmacSecret = $_ENV['HMAC_SECRET'];
 $dbPath = dirname(__DIR__) . '/' . $_ENV['DB_PATH'];
 $appLocale = $_ENV['APP_LOCALE'];
+$appDescription = $_ENV['APP_DESCRIPTION'] ?? '';
 
 // Initialise translator
 Translator::init($appLocale, dirname(__DIR__) . '/lang');
@@ -215,10 +216,12 @@ function handleConfirmUnsubscribe(): void
 
 function renderPage(string $template, array $vars = []): void
 {
-    global $appName, $appUrl;
+    global $appName, $appUrl, $appDescription, $adminEmail;
 
     $vars['appName'] = $appName;
     $vars['appUrl'] = $appUrl;
+    $vars['appDescription'] = $appDescription;
+    $vars['adminEmail'] = $adminEmail;
     extract($vars);
 
     ob_start();
