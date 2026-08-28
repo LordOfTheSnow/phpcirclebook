@@ -14,9 +14,12 @@ return [
     'form.email_placeholder' => 'you@example.com',
     'form.name_label'        => 'Name (optional)',
     'form.name_placeholder'  => 'Your Name',
+    'form.comment_label'     => 'Comment (optional, max {max} characters)',
+    'form.comment_placeholder' => 'Anything you\'d like the administrator to know',
     'form.honeypot_label'    => 'Leave this empty',
     'form.submit'            => 'Send me the list',
     'form.explanation'       => 'Enter your email to receive the recipient list. If you\'re not yet registered, your request will be forwarded to the administrator for approval.',
+    'form.disclaimer'        => 'By subscribing to the list, you allow the other members to see your email address. If you don\'t want that, please don\'t subscribe.',
 
     // --- Unsubscribe page (templates/unsubscribe.php) ---
     'unsubscribe.heading'    => 'Unsubscribe',
@@ -52,6 +55,7 @@ return [
     'mail.approval_intro'    => 'A new registration request for {appName}:',
     'mail.approval_email'    => 'Email: {email}',
     'mail.approval_name'     => 'Name: {name}',
+    'mail.approval_comment'  => 'Comment: {comment}',
     'mail.approval_approve'  => 'Approve:',
     'mail.approval_reject'   => 'Reject:',
 

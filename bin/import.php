@@ -54,6 +54,7 @@ if ($lines === false) {
 // --- Import ---
 
 $imported = 0;
+$importedEntries = [];
 $duplicates = [];
 $errors = [];
 
@@ -93,6 +94,8 @@ foreach ($lines as $lineNumber => $line) {
     // Insert as approved member with current timestamp
     $db->createApprovedRecipient($email, $name);
     $imported++;
+    $displayName = $name ?? '(no name)';
+    $importedEntries[] = "Line {$lineNum}: {$email} — imported as \"{$displayName}\"";
 }
 
 // --- Summary ---
@@ -103,6 +106,13 @@ echo "Lines:     " . count($lines) . "\n";
 echo "Imported:  {$imported}\n";
 echo "Duplicates: " . count($duplicates) . "\n";
 echo "Errors:    " . count($errors) . "\n";
+
+if (!empty($importedEntries)) {
+    echo "\n--- Imported ---\n";
+    foreach ($importedEntries as $i) {
+        echo "  {$i}\n";
+    }
+}
 
 if (!empty($duplicates)) {
     echo "\n--- Duplicates (kept existing entry) ---\n";

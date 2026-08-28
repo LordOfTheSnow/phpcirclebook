@@ -33,6 +33,7 @@ final class Database
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 email TEXT NOT NULL UNIQUE COLLATE NOCASE,
                 name TEXT DEFAULT NULL,
+                comment TEXT DEFAULT NULL,
                 status TEXT NOT NULL DEFAULT 'pending' CHECK(status IN ('pending', 'approved', 'rejected')),
                 token TEXT DEFAULT NULL,
                 token_expires_at TEXT DEFAULT NULL,
@@ -53,6 +54,19 @@ final class Database
             CREATE INDEX IF NOT EXISTS idx_rate_limits_key_created
             ON rate_limits (key, created_at)
         ");
+
+        // Add optional comment column for existing databases (idempotent).
+        $columns = $this->pdo->query("PRAGMA table_info(recipients)")->fetchAll();
+        $hasComment = false;
+        foreach ($columns as $column) {
+            if (($column['name'] ?? '') === 'comment') {
+                $hasComment = true;
+                break;
+            }
+        }
+        if (!$hasComment) {
+            $this->pdo->exec("ALTER TABLE recipients ADD COLUMN comment TEXT DEFAULT NULL");
+        }
     }
 
     // --- Recipient queries ---
@@ -81,15 +95,16 @@ final class Database
         return $stmt->fetchAll();
     }
 
-    public function createRecipient(string $email, ?string $name, string $token, string $expiresAt): void
+    public function createRecipient(string $email, ?string $name, ?string $comment, string $token, string $expiresAt): void
     {
         $stmt = $this->pdo->prepare("
-            INSERT INTO recipients (email, name, status, token, token_expires_at)
-            VALUES (:email, :name, 'pending', :token, :expires)
+            INSERT INTO recipients (email, name, comment, status, token, token_expires_at)
+            VALUES (:email, :name, :comment, 'pending', :token, :expires)
         ");
         $stmt->execute([
             'email' => $email,
             'name' => $name,
+            'comment' => $comment,
             'token' => $token,
             'expires' => $expiresAt,
         ]);

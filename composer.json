@@ -2,6 +2,14 @@
     "name": "phpcirclebook/app",
     "description": "Self-contained PHP contact directory with admin-gated registration",
     "type": "project",
+    "version": "0.9.0",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "LordOfTheSnow",
+            "homepage": "https://github.com/LordOfTheSnow"
+        }
+    ],
     "require": {
         "php": ">=8.2",
         "ext-intl": "*",
@@ -11,5 +19,8 @@
         "psr-4": {
             "App\\": "src/"
         }
+    },
+    "scripts": {
+        "start": "php -S 0.0.0.0:8001 -t public/"
     }
 }

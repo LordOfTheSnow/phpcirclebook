@@ -43,7 +43,7 @@ final class Mailer
     /**
      * Send approval request to the admin.
      */
-    public function sendApprovalRequest(string $email, ?string $name, string $token): bool
+    public function sendApprovalRequest(string $email, ?string $name, ?string $comment, string $token): bool
     {
         $displayName = $name ? "{$name} ({$email})" : $email;
 
@@ -51,6 +51,9 @@ final class Mailer
         $body .= __('mail.approval_email', ['email' => $email]) . "\n";
         if ($name) {
             $body .= __('mail.approval_name', ['name' => $name]) . "\n";
+        }
+        if ($comment !== null && $comment !== '') {
+            $body .= __('mail.approval_comment', ['comment' => $comment]) . "\n";
         }
         $body .= "\n";
         $body .= __('mail.approval_approve') . "\n";

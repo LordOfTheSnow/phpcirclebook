@@ -1,0 +1,99 @@
+name: Build FTP release zip
+
+# Publishes a ready-to-upload zip (vendor/ already installed) as a GitHub
+# Release asset for a given version tag -- specifically for the FTP-only
+# shared hosting path documented in README.md, where there's no shell access
+# to run `composer install` on the server -- see that file's "Installing via
+# FTP (no shell access)" section.
+#
+# Normally invoked by release.yml's `ftp-zip` job right after it creates a
+# new release (workflow_call). The `push: tags:` trigger is kept as a
+# fallback for a tag pushed by a human/PAT directly -- a tag pushed by a
+# workflow using the default GITHUB_TOKEN (as release.yml's does) does not
+# fire other workflows' tag-push triggers, so relying on that trigger alone
+# would silently never run in the normal automated path. workflow_dispatch
+# is for manually (re)building the zip for an already-tagged release.
+
+on:
+  push:
+    tags:
+      - 'v*.*.*'
+  workflow_call:
+    inputs:
+      tag:
+        description: "Git tag (e.g. v0.9.0)"
+        required: true
+        type: string
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Git tag to build (e.g. v0.9.0). Defaults to latest tag."
+        required: false
+        type: string
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Resolve tag and check it out
+        run: |
+          TAG="${{ inputs.tag }}"
+          if [ -z "$TAG" ] && [ "${{ github.event_name }}" = "push" ]; then
+            TAG="${{ github.ref_name }}"
+          fi
+          if [ -z "$TAG" ]; then
+            # workflow_dispatch without an input — find latest v* tag
+            TAG=$(git tag --list 'v*' --sort=-v:refname | head -n1)
+          fi
+          if [ -z "$TAG" ]; then
+            echo "::error::No version tag found"
+            exit 1
+          fi
+          echo "TAG=$TAG" >> "$GITHUB_ENV"
+          git checkout "$TAG"
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          # Matches composer.json's "php": ">=8.2" floor, so the committed
+          # vendor/ this produces works on the oldest PHP this app supports.
+          php-version: '8.2'
+          extensions: intl, pdo_sqlite
+          coverage: none
+
+      - name: Install production dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction
+
+      - name: Assemble FTP-ready zip
+        run: |
+          zip -r "phpcirclebook-ftp-${TAG}.zip" . \
+            -x '.git/*' \
+            -x '.github/*' \
+            -x '.gitignore' \
+            -x 'docs/*' \
+            -x 'import.csv' \
+            -x '.env' \
+            -x 'data/*.db'
+
+      - name: Publish release asset
+        run: |
+          ZIP="phpcirclebook-ftp-${TAG}.zip"
+          if gh release view "$TAG" >/dev/null 2>&1; then
+            # release.yml already created this release (with its CHANGELOG-derived
+            # notes) moments ago -- just attach the asset, don't touch the notes.
+            gh release upload "$TAG" "$ZIP" --clobber
+          else
+            # Fallback path: no release exists yet (e.g. a manually pushed tag
+            # with release.yml never having run) -- create one from scratch.
+            gh release create "$TAG" "$ZIP" --title "$TAG" --notes-file .github/ftp-release-notes.md
+          fi
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}

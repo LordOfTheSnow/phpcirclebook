@@ -78,6 +78,7 @@ function handleSubmit(): void
 
     $email = trim($_POST['email'] ?? '');
     $name = trim($_POST['name'] ?? '') ?: null;
+    $comment = mb_substr(trim($_POST['comment'] ?? ''), 0, COMMENT_MAX_LENGTH) ?: null;
 
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
         renderMessage(__('message.invalid_email'));
@@ -100,8 +101,8 @@ function handleSubmit(): void
         // New registration
         $token = $tokenService->generateApprovalToken();
         $expires = $tokenService->approvalTokenExpiry();
-        $db->createRecipient($email, $name, $token, $expires);
-        $mailer->sendApprovalRequest($email, $name, $token);
+        $db->createRecipient($email, $name, $comment, $token, $expires);
+        $mailer->sendApprovalRequest($email, $name, $comment, $token);
         renderMessage(__('message.generic_thanks'));
         return;
     }
@@ -109,7 +110,7 @@ function handleSubmit(): void
     match ($recipient['status']) {
         'approved' => handleSendList($email),
         'rejected' => renderMessage(__('message.generic_thanks')),
-        'pending' => handleResubmit($email, $name, $recipient),
+        'pending' => handleResubmit($email, $name, $comment, $recipient),
         default => renderMessage(__('message.generic_thanks')),
     };
 }
@@ -123,7 +124,7 @@ function handleSendList(string $email): void
     renderMessage(__('message.list_sent'));
 }
 
-function handleResubmit(string $email, ?string $name, array $existing): void
+function handleResubmit(string $email, ?string $name, ?string $comment, array $existing): void
 {
     global $db, $mailer, $tokenService;
 
@@ -131,7 +132,7 @@ function handleResubmit(string $email, ?string $name, array $existing): void
     $token = $tokenService->generateApprovalToken();
     $expires = $tokenService->approvalTokenExpiry();
     $db->updateRecipientToken($email, $token, $expires);
-    $mailer->sendApprovalRequest($email, $name ?? $existing['name'], $token);
+    $mailer->sendApprovalRequest($email, $name ?? $existing['name'], $comment ?? ($existing['comment'] ?? null), $token);
     renderMessage(__('message.generic_thanks'));
 }
 

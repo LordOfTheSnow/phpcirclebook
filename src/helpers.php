@@ -5,6 +5,39 @@ declare(strict_types=1);
 use App\Translator;
 
 /**
+ * Application version (Semantic Versioning).
+ *
+ * Single source of truth is the "version" field in composer.json — the same field the
+ * release workflow reads to tag releases. Read once and cached for the request. Falls
+ * back to 'dev' if composer.json is missing or unparseable.
+ */
+function app_version(): string
+{
+    static $version = null;
+
+    if ($version !== null) {
+        return $version;
+    }
+
+    $version = 'dev';
+    $composerPath = dirname(__DIR__) . '/composer.json';
+
+    if (is_file($composerPath)) {
+        $data = json_decode((string) file_get_contents($composerPath), true);
+        if (is_array($data) && !empty($data['version']) && is_string($data['version'])) {
+            $version = $data['version'];
+        }
+    }
+
+    return $version;
+}
+
+/**
+ * Maximum length (in characters) for the optional comment field.
+ */
+const COMMENT_MAX_LENGTH = 500;
+
+/**
  * Translate a key, optionally interpolating placeholders.
  *
  * Usage: __('form.submit')

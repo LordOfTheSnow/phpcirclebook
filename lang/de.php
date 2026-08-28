@@ -14,9 +14,12 @@ return [
     'form.email_placeholder' => 'du@beispiel.de',
     'form.name_label'        => 'Name (optional)',
     'form.name_placeholder'  => 'Dein Name',
+    'form.comment_label'     => 'Kommentar (optional, max. {max} Zeichen)',
+    'form.comment_placeholder' => 'Was der Administrator wissen sollte',
     'form.honeypot_label'    => 'Dieses Feld leer lassen',
     'form.submit'            => 'Liste anfordern',
     'form.explanation'       => 'Gib deine E-Mail-Adresse ein, um die Empfängerliste zu erhalten. Falls du noch nicht registriert bist, wird deine Anfrage zur Genehmigung an den Administrator weitergeleitet.',
+    'form.disclaimer'        => 'Wenn du dich in die Liste einträgst, können die anderen Mitglieder deine E-Mail-Adresse sehen. Wenn du das nicht möchtest, trage dich bitte nicht ein.',
 
     // --- Abmeldung (templates/unsubscribe.php) ---
     'unsubscribe.heading'    => 'Abmelden',
@@ -52,6 +55,7 @@ return [
     'mail.approval_intro'    => 'Neue Registrierungsanfrage für {appName}:',
     'mail.approval_email'    => 'E-Mail: {email}',
     'mail.approval_name'     => 'Name: {name}',
+    'mail.approval_comment'  => 'Kommentar: {comment}',
     'mail.approval_approve'  => 'Genehmigen:',
     'mail.approval_reject'   => 'Ablehnen:',
 

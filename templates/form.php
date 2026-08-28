@@ -5,6 +5,7 @@
         <p><?= htmlspecialchars($appDescription) ?></p>
     <?php endif; ?>
     <p><?= __('info.how_it_works') ?></p>
+    <p class="disclaimer"><small><strong><span class="disclaimer-icon" aria-hidden="true">&#9888;&#65039;</span><?= __('form.disclaimer') ?></strong></small></p>
     <footer><small><?= __('info.contact', ['email' => obfuscateEmail($adminEmail)]) ?></small></footer>
 </article>
 
@@ -18,6 +19,11 @@
         <label for="name">
             <?= __('form.name_label') ?>
             <input type="text" id="name" name="name" placeholder="<?= htmlspecialchars(__('form.name_placeholder')) ?>">
+        </label>
+
+        <label for="comment">
+            <?= __('form.comment_label', ['max' => COMMENT_MAX_LENGTH]) ?>
+            <textarea id="comment" name="comment" rows="3" maxlength="<?= COMMENT_MAX_LENGTH ?>" placeholder="<?= htmlspecialchars(__('form.comment_placeholder')) ?>"></textarea>
         </label>
 
         <!-- Honeypot field — hidden from humans -->

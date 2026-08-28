@@ -1,0 +1,45 @@
+name: CI
+
+# Lightweight checks on every push to main and every pull request: lint all PHP
+# sources and validate composer.json / composer.lock. Cheap insurance against a
+# broken commit reaching main (where release.yml would then act on it).
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          # Matches composer.json's "php": ">=8.2" floor.
+          php-version: '8.2'
+          extensions: intl, pdo_sqlite
+          coverage: none
+          tools: composer
+
+      - name: Lint all PHP files
+        run: |
+          # Fail if any .php file has a syntax error. Skip vendor/.
+          error=0
+          while IFS= read -r file; do
+            if ! php -l "$file" > /dev/null 2>&1; then
+              echo "::error file=$file::PHP syntax error"
+              php -l "$file" || true
+              error=1
+            fi
+          done < <(find . -type f -name '*.php' -not -path './vendor/*')
+          exit $error
+
+      - name: Validate composer.json and composer.lock
+        # Not --strict: the intentional "version" field (needed by the release
+        # workflow) triggers a warning that --strict would treat as a failure.
+        run: composer validate --no-check-publish

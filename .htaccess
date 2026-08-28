@@ -1,0 +1,31 @@
+# Only needed when the web space document root is this project directory rather
+# than public/ (see README "Installing via FTP" — shared hosts that can't repoint
+# the docroot). On hosts where you CAN point the docroot at public/, this file is
+# harmless and simply unused.
+#
+# Two jobs:
+#   1. Deny web access to everything outside public/ (source, dependencies, the
+#      SQLite database, and the .env secret would otherwise be directly
+#      downloadable when the docroot is the project root).
+#   2. Route all remaining requests through the front controller in public/.
+
+# --- 1. Block direct access to sensitive paths ---------------------------------
+
+# Never serve the environment file, the database, or version-control/CI metadata.
+<FilesMatch "(^\.env|\.db|\.sqlite|\.sqlite3)$">
+    Require all denied
+</FilesMatch>
+
+RewriteEngine On
+
+# Block direct HTTP access to the non-public directories. These are served by PHP
+# via require/include, but must never be reachable as URLs.
+RewriteRule ^(vendor|src|templates|lang|bin|data|docs|\.git|\.github)(/|$) - [F,L]
+
+# --- 2. Front-controller routing -----------------------------------------------
+
+# Send everything else to the root fallback front controller, which loads
+# public/index.php. Existing real files (if any) are served as-is.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [L]
