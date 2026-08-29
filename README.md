@@ -1,9 +1,9 @@
 # PHPCircleBook
 
+[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](CHANGELOG.md)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg?logo=php&logoColor=white)](https://www.php.net/)
 [![SQLite](https://img.shields.io/badge/SQLite-embedded-003B57.svg?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![No build step](https://img.shields.io/badge/build-none-brightgreen.svg)](#requirements)
-[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](CHANGELOG.md)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
 A self-contained PHP contact directory with admin-gated registration and self-service list retrieval. Built to run on simple PHP webhosting.
@@ -135,6 +135,21 @@ chmod 775 data/
 ```
 
 Point your web server's document root to the `public/` directory.
+
+## Running locally
+
+For local development and testing, start PHP's built-in web server via the Composer
+script:
+
+```bash
+composer start
+```
+
+This runs `php -S 0.0.0.0:8001 -t public/`, serving the app at
+[http://localhost:8001](http://localhost:8001). Stop it with `Ctrl+C`. Note that PHP's
+`mail()` typically does not send real email from a local machine, so approval and list
+emails won't be delivered in this setup — check your PHP/MTA configuration if you need to
+test the full email flow locally.
 
 ## Configuration
 

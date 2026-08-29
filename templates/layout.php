@@ -85,7 +85,7 @@
         <header class="app-header">
             <h1><?= htmlspecialchars($appName) ?></h1>
             <small class="app-version">
-                <a href="https://github.com/LordOfTheSnow/phpcirclebook">PHPCircleBook v<?= htmlspecialchars(app_version()) ?></a>
+                <a href="https://github.com/LordOfTheSnow/phpcirclebook" target="_blank">PHPCircleBook v<?= htmlspecialchars(app_version()) ?></a>
             </small>
         </header>
         <?= $content ?>
