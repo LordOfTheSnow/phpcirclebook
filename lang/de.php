@@ -48,6 +48,8 @@ return [
     'mail.list_total'        => 'Insgesamt: {count} Empfänger',
     'mail.list_unsubscribe'  => 'Um dich von dieser Liste abzumelden:',
 
+    'mail.csv_header_public_note' => 'Öffentliche Notiz',
+    'mail.csv_header_tags'       => 'Schlagwörter',
     'mail.csv_header_registered' => 'Registriert',
 
     // --- E-Mail: Genehmigungsanfrage an Admin ---

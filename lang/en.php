@@ -48,6 +48,8 @@ return [
     'mail.list_total'        => 'Total: {count} recipient(s)',
     'mail.list_unsubscribe'  => 'To unsubscribe from this list:',
 
+    'mail.csv_header_public_note' => 'Public note',
+    'mail.csv_header_tags'       => 'Tags',
     'mail.csv_header_registered' => 'Registered',
 
     // --- Email: Approval request to admin ---

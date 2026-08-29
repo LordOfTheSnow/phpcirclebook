@@ -50,4 +50,21 @@ final class RateLimiter
     {
         $this->db->cleanOldRateHits();
     }
+
+    /**
+     * Count hits for an arbitrary key within a window. Used by callers that need
+     * to throttle their own actions (e.g. admin login) reusing this store.
+     */
+    public function countHits(string $key, int $windowMinutes): int
+    {
+        return $this->db->countRateHits($key, $windowMinutes);
+    }
+
+    /**
+     * Record a hit for an arbitrary key.
+     */
+    public function recordKeyHit(string $key): void
+    {
+        $this->db->addRateHit($key);
+    }
 }

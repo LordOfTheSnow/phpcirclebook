@@ -22,10 +22,15 @@ final class Mailer
 
         foreach ($recipients as $r) {
             if (!empty($r['name'])) {
-                $body .= "{$r['name']} <{$r['email']}>\n";
+                $line = "{$r['name']} <{$r['email']}>";
             } else {
-                $body .= "{$r['email']}\n";
+                $line = $r['email'];
             }
+            // Append the public note in brackets when present (tags stay CSV-only).
+            if (!empty($r['public_note'])) {
+                $line .= " ({$r['public_note']})";
+            }
+            $body .= $line . "\n";
         }
 
         $body .= "\n---\n";
@@ -97,7 +102,13 @@ final class Mailer
     private function buildRecipientCsv(array $recipients): string
     {
         $handle = fopen('php://memory', 'r+');
-        fputcsv($handle, ['Email', 'Name', __('mail.csv_header_registered')]);
+        fputcsv($handle, [
+            'Email',
+            'Name',
+            __('mail.csv_header_public_note'),
+            __('mail.csv_header_tags'),
+            __('mail.csv_header_registered'),
+        ]);
 
         foreach ($recipients as $r) {
             $registeredAt = '';
@@ -105,7 +116,13 @@ final class Mailer
                 $ts = strtotime($r['created_at']);
                 $registeredAt = $ts !== false ? formatDate($ts) : $r['created_at'];
             }
-            fputcsv($handle, [$r['email'], $r['name'] ?? '', $registeredAt]);
+            fputcsv($handle, [
+                $r['email'],
+                $r['name'] ?? '',
+                $r['public_note'] ?? '',
+                $r['tags'] ?? '',
+                $registeredAt,
+            ]);
         }
 
         rewind($handle);

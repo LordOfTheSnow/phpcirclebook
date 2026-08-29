@@ -24,6 +24,11 @@ RewriteRule ^(vendor|src|templates|lang|bin|data|docs|\.git|\.github)(/|$) - [F,
 
 # --- 2. Front-controller routing -----------------------------------------------
 
+# Serve public/ static assets that live at the URL root (e.g. /favicon.svg) from
+# inside public/, so they work when the docroot is the project root too. Without
+# this the request would fall through to the front controller and return HTML.
+RewriteRule ^favicon\.svg$ public/favicon.svg [L]
+
 # Send everything else to the root fallback front controller, which loads
 # public/index.php. Existing real files (if any) are served as-is.
 RewriteCond %{REQUEST_FILENAME} !-f

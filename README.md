@@ -8,7 +8,7 @@
 
 A self-contained PHP contact directory with admin-gated registration and self-service list retrieval. Built to run on simple PHP webhosting.
 
-Members of a group (alumni, clubs, communities) can apply to join. Once approved by the admin, they can request the contact list of all other members. No admin panel, no login system — just email.
+Members of a group (alumni, clubs, communities) can apply to join. Once approved by the admin, they can request the contact list of all other members. The everyday flow runs entirely over email — no login required — with an optional password-protected admin tool for direct recipient management when you need it.
 
 ## Features
 
@@ -17,6 +17,7 @@ Members of a group (alumni, clubs, communities) can apply to join. Once approved
 - Configurable info card on the main page (via `APP_DESCRIPTION` in `.env`)
 - Obfuscated admin contact email (anti-harvesting)
 - CLI import tool for bulk-adding existing members
+- Optional admin tool (web + CLI) to read, add, edit, and remove recipients
 - Unsubscribe with confirmation page
 - Bot protection (honeypot + rate limiting)
 - Internationalised — ships with English and German, easy to add more
@@ -120,6 +121,13 @@ HMAC_SECRET="generate-a-long-random-string-here"
 DB_PATH="data/mailinglist.db"
 APP_LOCALE="en_US"
 APP_DESCRIPTION="Describe your mailing list here. This text is shown to visitors on the main page."
+
+# Admin tool (public/admin.php) — see the "Admin tool" section below.
+# Required only if you use the web admin. Generate with: php bin/hash-password.php
+ADMIN_PASSWORD_HASH=""
+# Optional; only for hosts behind a TLS-terminating proxy.
+# Only set it to true if you deploy behind a TLS-terminating proxy and find the admin session isn't sticking / the cookie isn't Secure despite being on HTTPS.
+ADMIN_FORCE_SECURE_COOKIE=false
 ```
 
 Generate a secure HMAC secret:
@@ -162,6 +170,66 @@ test the full email flow locally.
 | `DB_PATH` | Path to SQLite database file (relative to project root) |
 | `APP_LOCALE` | ICU locale code (e.g. `de_DE`, `en_US`, `fr_FR`) |
 | `APP_DESCRIPTION` | Custom text shown on the info card (optional, can be left empty) |
+| `ADMIN_PASSWORD_HASH` | bcrypt hash of the admin password for the web admin tool (see [Admin tool](#admin-tool)). Required only if you use `public/admin.php` |
+| `ADMIN_FORCE_SECURE_COOKIE` | Optional. Force the admin session cookie to `Secure` when your host terminates TLS at an upstream proxy and forwards plain HTTP to PHP. Leave unset (`false`) for normal setups |
+
+## Admin tool
+
+Alongside the email approval links, the recipient database can be managed directly
+through two interfaces that share the same data layer:
+
+- **Web admin** — `public/admin.php`, a password-protected page for hosts without
+  shell access.
+- **CLI** — `bin/admin.php`, for shell or cron use (see [CLI Tools](#cli-tools)).
+
+Both can list, add, edit, and delete recipients, and change their status. Setting a
+recipient to *approved* through either interface sends the same confirmation email as
+the approval link.
+
+> **Serve the admin tool from behind `public/`.**
+> `public/admin.php` must only be reachable with the document root set to `public/`
+> (or, on FTP-only hosts, via the root `.htaccess` fallback that blocks the non-public
+> directories). This keeps the SQLite database, `.env`, and application source
+> unreachable over HTTP. Always serve the admin page over **HTTPS** — the login
+> password and session cookie must never travel over plain HTTP in production.
+
+### Setting the admin password
+
+The web admin is gated by a single password, stored as a bcrypt hash in
+`ADMIN_PASSWORD_HASH`. Generate the hash with the bundled helper, which reads the
+password from a hidden prompt (so it never lands in your shell history):
+
+```bash
+php bin/hash-password.php
+```
+
+Copy the printed `ADMIN_PASSWORD_HASH="$2y$..."` line into your `.env`.
+
+Any tool that produces a compatible bcrypt hash works equally well — the app verifies
+with PHP's `password_verify()`, which detects the algorithm from the hash itself.
+Cross-platform alternatives:
+
+```bash
+# Apache htpasswd (bcrypt, cost 12); strip the leading ":" from the output
+htpasswd -bnBC 12 "" 'your-password' | sed 's/^://'
+
+# Python (requires the bcrypt package)
+python3 -c 'import bcrypt; print(bcrypt.hashpw(b"your-password", bcrypt.gensalt()).decode())'
+```
+
+### Testing the admin locally
+
+The admin session cookie is marked `Secure` only when the request is actually over
+HTTPS (auto-detected), so you can log in and test over plain HTTP locally without any
+certificate setup:
+
+```bash
+composer start
+```
+
+Then open [http://localhost:8001/admin.php](http://localhost:8001/admin.php). As with
+the rest of the app, `mail()` usually won't deliver from a local machine, so the
+approval-confirmation email won't arrive locally even though the status change succeeds.
 
 ## Localisation
 
@@ -193,11 +261,14 @@ Dates and numbers are formatted using PHP's `intl` extension according to the co
 phpcirclebook/
 ├── public/
 │   ├── index.php           # Front controller (routing + handlers)
+│   ├── admin.php           # Admin tool front controller (password-gated)
+│   ├── favicon.svg         # App icon (ring + dot, brand blue)
 │   └── .htaccess           # Front-controller rewrite (docroot = public/)
 ├── index.php               # Fallback front controller (docroot = project root)
 ├── .htaccess               # Root routing + denies web access to non-public files
 ├── src/
 │   ├── Database.php        # SQLite persistence layer
+│   ├── DuplicateEmailException.php # Thrown on a recipient email UNIQUE collision
 │   ├── Mailer.php          # Email composition and sending
 │   ├── RateLimiter.php     # Per-IP and per-email throttling
 │   ├── TokenService.php    # Approval + unsubscribe token generation
@@ -206,6 +277,8 @@ phpcirclebook/
 ├── templates/              # PHP templates (form, layout, message, unsubscribe)
 ├── lang/                   # Translation files (one PHP array per locale)
 ├── bin/
+│   ├── admin.php           # CLI: manage recipients (list/add/edit/status/delete)
+│   ├── hash-password.php   # CLI: generate the admin password hash
 │   ├── import.php          # CLI: bulk-import members from a semicolon-separated file
 │   └── reset-ratelimit.php # CLI: clear all rate limit entries
 ├── data/                   # SQLite database (auto-created on first use)
@@ -218,6 +291,32 @@ phpcirclebook/
 
 ## CLI Tools
 
+### Manage recipients
+
+Read, add, edit, and remove recipients from the command line. Recipients are addressed
+by their numeric id (shown by `list`):
+
+```bash
+php bin/admin.php list
+php bin/admin.php add alice@example.com "Alice Müller" --public-note="left a year early" --tags=board
+php bin/admin.php edit 3 --public-note="left a year early" --tags=board,founder
+php bin/admin.php status 3 approved
+php bin/admin.php delete 3
+```
+
+New recipients added this way are set to *approved*. On `edit`, only the flags you pass
+are changed; omitted flags leave those fields untouched. Setting status to *approved*
+sends a confirmation email, and prints a warning (without failing) if the host cannot
+send mail — common on shared-hosting CLI.
+
+### Generate the admin password hash
+
+```bash
+php bin/hash-password.php
+```
+
+See [Admin tool](#admin-tool) for details.
+
 ### Import members
 
 Bulk-import an existing member list:
@@ -226,12 +325,16 @@ Bulk-import an existing member list:
 php bin/import.php members.txt
 ```
 
-File format (one entry per line, `#` lines are comments):
+File format (one entry per line, `#` lines are comments). Fields are separated by `;`
+in the order `email;name;public note;tags`. Only the email is required — any trailing
+field can be left empty and is skipped for that entry:
 
 ```
-alice@example.com;Alice Müller
+alice@example.com;Alice Müller;left a year early;board,founder
 bob@example.com;Bob
-carol@example.com;
+carol@example.com
+dave@example.com;Dave;;alumni
+erin@example.com;Erin;honorary member;
 ```
 
 Imported members are set to "approved" status. Duplicates are skipped and reported.

@@ -55,18 +55,27 @@ final class Database
             ON rate_limits (key, created_at)
         ");
 
-        // Add optional comment column for existing databases (idempotent).
-        $columns = $this->pdo->query("PRAGMA table_info(recipients)")->fetchAll();
-        $hasComment = false;
-        foreach ($columns as $column) {
-            if (($column['name'] ?? '') === 'comment') {
-                $hasComment = true;
-                break;
+        // Add optional columns for existing databases (idempotent).
+        $this->addColumnIfMissing('recipients', 'comment', "TEXT DEFAULT NULL");
+        // public_note: admin-curated annotation, visible to list recipients (ADR-003).
+        $this->addColumnIfMissing('recipients', 'public_note', "TEXT DEFAULT NULL");
+        // tags: single free-text taxonomy field, admin-internal (ADR-003).
+        $this->addColumnIfMissing('recipients', 'tags', "TEXT DEFAULT NULL");
+    }
+
+    /**
+     * Add a column to a table only if it does not already exist. Idempotent, so
+     * it is safe to run on every boot for both fresh and existing databases.
+     */
+    private function addColumnIfMissing(string $table, string $column, string $definition): void
+    {
+        $columns = $this->pdo->query("PRAGMA table_info({$table})")->fetchAll();
+        foreach ($columns as $existing) {
+            if (($existing['name'] ?? '') === $column) {
+                return;
             }
         }
-        if (!$hasComment) {
-            $this->pdo->exec("ALTER TABLE recipients ADD COLUMN comment TEXT DEFAULT NULL");
-        }
+        $this->pdo->exec("ALTER TABLE {$table} ADD COLUMN {$column} {$definition}");
     }
 
     // --- Recipient queries ---
@@ -91,7 +100,7 @@ final class Database
 
     public function getApprovedRecipients(): array
     {
-        $stmt = $this->pdo->query("SELECT email, name, created_at FROM recipients WHERE status = 'approved' ORDER BY name, email");
+        $stmt = $this->pdo->query("SELECT email, name, public_note, tags, created_at FROM recipients WHERE status = 'approved' ORDER BY name, email");
         return $stmt->fetchAll();
     }
 
@@ -123,6 +132,97 @@ final class Database
             'email' => $email,
             'name' => $name,
         ]);
+    }
+
+    // --- Admin operations (ADR-003) ---
+
+    /**
+     * Return all recipients regardless of status, newest first. Used by the admin tool.
+     */
+    public function getAllRecipients(): array
+    {
+        $stmt = $this->pdo->query("
+            SELECT id, email, name, comment, public_note, tags, status, created_at, updated_at
+            FROM recipients
+            ORDER BY created_at DESC, id DESC
+        ");
+        return $stmt->fetchAll();
+    }
+
+    /**
+     * Find a single recipient by primary key, or null if not found.
+     */
+    public function findRecipientById(int $id): ?array
+    {
+        $stmt = $this->pdo->prepare("SELECT * FROM recipients WHERE id = :id");
+        $stmt->execute(['id' => $id]);
+        $row = $stmt->fetch();
+        return $row ?: null;
+    }
+
+    /**
+     * Partial update of a recipient, keyed on id.
+     *
+     * Only fields in the allowed set are written; unknown keys are rejected to
+     * prevent editing security-sensitive columns (token, timestamps). updated_at
+     * is always refreshed. A uniqueness collision on email surfaces as a
+     * DuplicateEmailException rather than a raw PDOException.
+     *
+     * @param array<string,mixed> $fields
+     * @throws \InvalidArgumentException on an unknown field or empty update
+     * @throws DuplicateEmailException   when the new email is already in use
+     */
+    public function updateRecipient(int $id, array $fields): void
+    {
+        $allowed = ['name', 'email', 'comment', 'public_note', 'tags', 'status'];
+
+        $set = [];
+        $params = ['id' => $id];
+        foreach ($fields as $column => $value) {
+            if (!in_array($column, $allowed, true)) {
+                throw new \InvalidArgumentException("Field not editable: {$column}");
+            }
+            $set[] = "{$column} = :{$column}";
+            $params[$column] = $value;
+        }
+
+        if ($set === []) {
+            throw new \InvalidArgumentException('No fields to update.');
+        }
+
+        $set[] = "updated_at = datetime('now')";
+        $sql = "UPDATE recipients SET " . implode(', ', $set) . " WHERE id = :id";
+
+        try {
+            $stmt = $this->pdo->prepare($sql);
+            $stmt->execute($params);
+        } catch (\PDOException $e) {
+            if ($this->isUniqueConstraintViolation($e)) {
+                throw new DuplicateEmailException(
+                    'Email address is already in use by another recipient.',
+                    0,
+                    $e
+                );
+            }
+            throw $e;
+        }
+    }
+
+    /**
+     * Delete a recipient by primary key. The admin handle is id (stable even if
+     * the email is later edited), unlike deleteRecipientByEmail used by unsubscribe.
+     */
+    public function deleteRecipientById(int $id): void
+    {
+        $stmt = $this->pdo->prepare("DELETE FROM recipients WHERE id = :id");
+        $stmt->execute(['id' => $id]);
+    }
+
+    private function isUniqueConstraintViolation(\PDOException $e): bool
+    {
+        // SQLite reports UNIQUE violations with SQLSTATE 23000 and a message
+        // containing "UNIQUE constraint failed".
+        return str_contains($e->getMessage(), 'UNIQUE constraint failed');
     }
 
     public function updateRecipientToken(string $email, string $token, string $expiresAt): void

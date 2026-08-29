@@ -88,3 +88,37 @@ A `{name}`-style token inside a translation string that gets replaced at runtime
 
 **IntlDateFormatter / NumberFormatter**  
 PHP `intl` extension classes used for locale-aware date and number formatting. Configured with the full `APP_LOCALE` value to respect regional conventions (e.g. `25.08.2026` in German vs `08/25/2026` in American English).
+
+---
+
+## Admin Tool
+
+**Admin Tool**  
+The pair of interfaces for managing recipients directly: a password-protected web page (`public/admin.php`) and a command-line tool (`bin/admin.php`). Both operate on the same `recipients` table through shared `App\Database` methods.
+
+**Web Admin**  
+The standalone `public/admin.php` front controller. Has its own bootstrap, login gate, and router, separate from the public `index.php`. Reached at `/admin.php` and intended for hosts without shell access.
+
+**CLI Admin**  
+The `bin/admin.php` command-line tool with `list`, `add`, `edit`, `status`, and `delete` subcommands. Non-interactive and flag-driven; recipients are addressed by their `id`. Intended for shell or cron use.
+
+**Admin Password**  
+A single shared secret that gates the web admin. Stored as a bcrypt hash in `ADMIN_PASSWORD_HASH` in `.env` and verified with `password_verify()`. There is one operator; no user accounts or roles.
+
+**`ADMIN_PASSWORD_HASH`**  
+The `.env` entry holding the bcrypt (`$2y$`) hash of the admin password. Generated with `bin/hash-password.php` or any tool that produces a compatible bcrypt hash (e.g. `htpasswd -bnBC`).
+
+**Password Hash Helper**  
+The `bin/hash-password.php` script. Reads a password from a hidden stdin prompt (never from command-line arguments, keeping it out of shell history) and prints the ready-to-paste `ADMIN_PASSWORD_HASH=` line.
+
+**CSRF Token**  
+A per-session token embedded as a hidden field in every state-changing admin form and verified on submission, preventing cross-site request forgery. Used only by the admin tool; the public form relies on a honeypot and HMAC tokens instead.
+
+**Public Note**  
+The `public_note` column: an annotation about a recipient that is intended to be visible to everyone who receives the list (e.g. "left the school one year before graduation"). Distinct from *Comment*, which is private to the admin. Editable in the admin tool and shared with approved recipients: shown in brackets after each entry in the plain-text list and as a column in the CSV attachment.
+
+**Comment**  
+The `comment` column: free text a registrant optionally provides for the admin during registration (e.g. "you might know me from the class of 1986"). Private — shown to the admin, never published in the list.
+
+**Tags**  
+The `tags` column: a single free-text field for ad-hoc taxonomy or categorisation of a recipient. Included as a column in the CSV attachment of the shared list, but kept out of the plain-text email body to avoid clutter.
