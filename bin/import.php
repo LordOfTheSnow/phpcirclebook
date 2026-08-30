@@ -7,9 +7,11 @@ declare(strict_types=1);
  *
  * Usage: php bin/import.php <file>
  *
- * File format (one entry per line):
- *   email@example.com;Optional Name
+ * File format (one entry per line), fields separated by ";":
+ *   email@example.com;Optional Name;Optional public note;Optional tags
  *
+ * - Only the email is required. Any of the trailing fields (name, public note,
+ *   tags) may be left empty and are skipped for that entry.
  * - Imported members are set to "approved" status with the current date as registration date.
  * - Duplicates (email already in the database) are skipped and listed in the output.
  * - Invalid lines are reported with line numbers.
@@ -33,7 +35,7 @@ $db = new Database($dbPath);
 
 if ($argc < 2) {
     fwrite(STDERR, "Usage: php bin/import.php <file>\n");
-    fwrite(STDERR, "File format: email;name (one per line, name is optional)\n");
+    fwrite(STDERR, "File format: email;name;public note;tags (one per line; only email is required)\n");
     exit(1);
 }
 
@@ -66,14 +68,22 @@ foreach ($lines as $lineNumber => $line) {
         continue;
     }
 
-    $parts = explode(';', $line, 2);
+    // Fields: email ; name ; public note ; tags. Only email is required; any
+    // trailing field may be empty and is then skipped (stored as NULL).
+    $parts = explode(';', $line, 4);
     $email = trim($parts[0]);
-    $name = isset($parts[1]) ? trim($parts[1]) : null;
 
-    // Treat empty name as null
-    if ($name === '') {
-        $name = null;
-    }
+    $normalise = static function (?string $value): ?string {
+        if ($value === null) {
+            return null;
+        }
+        $value = trim($value);
+        return $value === '' ? null : $value;
+    };
+
+    $name = $normalise($parts[1] ?? null);
+    $publicNote = $normalise($parts[2] ?? null);
+    $tags = $normalise($parts[3] ?? null);
 
     // Validate email
     if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -91,11 +101,33 @@ foreach ($lines as $lineNumber => $line) {
         continue;
     }
 
-    // Insert as approved member with current timestamp
+    // Insert as approved member with current timestamp, then apply any extra fields.
     $db->createApprovedRecipient($email, $name);
+    $extra = [];
+    if ($publicNote !== null) {
+        $extra['public_note'] = $publicNote;
+    }
+    if ($tags !== null) {
+        $extra['tags'] = $tags;
+    }
+    if ($extra !== []) {
+        $created = $db->findRecipientByEmail($email);
+        if ($created !== null) {
+            $db->updateRecipient((int) $created['id'], $extra);
+        }
+    }
+
     $imported++;
     $displayName = $name ?? '(no name)';
-    $importedEntries[] = "Line {$lineNum}: {$email} — imported as \"{$displayName}\"";
+    $extraSummary = [];
+    if ($publicNote !== null) {
+        $extraSummary[] = 'note';
+    }
+    if ($tags !== null) {
+        $extraSummary[] = 'tags';
+    }
+    $suffix = $extraSummary !== [] ? ' (+' . implode(', ', $extraSummary) . ')' : '';
+    $importedEntries[] = "Line {$lineNum}: {$email} — imported as \"{$displayName}\"{$suffix}";
 }
 
 // --- Summary ---

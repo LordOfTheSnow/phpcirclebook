@@ -8,6 +8,41 @@ project's first tagged version — 0.9.0 covers everything built so far, pre-1.0
 
 ## [Unreleased]
 
+## [1.0.0] - 2026-08-30
+
+### Added
+
+- Optional footer line on the main form, configurable via `APP_FOOTER` in `.env`.
+  Shown only when set, with its own smaller serif styling and a divider above it.
+- Optional sidebar on the main form with two Markdown-driven cards, "Upcoming events"
+  (`content/events.md`) and "Links" (`content/links.md`). Each card appears only when
+  its file exists and is non-empty; if neither is present, the form stays full-width.
+  The side is configurable via `SIDEBAR_SIDE` (`left`/`right`, default `right`) and the
+  layout stacks below the form on narrow screens. Content is rendered with
+  `league/commonmark` in a hardened mode (raw HTML stripped, unsafe links disallowed).
+  Links in the cards open in a new tab (`target="_blank"`, `rel="noopener noreferrer"`).
+  See [ADR-004](docs/adr-004-sidebar.md).
+- Logo left of the app name in the header, configurable via `APP_LOGO` in `.env` (a
+  filename served from `public/`, or an absolute `https` URL). An empty value shows no
+  logo; the shipped `.env.example` defaults to `favicon.svg`, so fresh installs show the
+  bundled favicon. The logo auto-scales to the header height and may exceed it by at most
+  40px; when taller than the title, the header row grows and its contents stay vertically
+  centred.
+- Password show/hide toggle on the admin login field (an eye icon at the right edge).
+- Header attribution restyled: a smaller "powered by PHPCircleBook v… [GitHub icon]" link
+  that wraps cleanly on mobile, on both the main and admin pages.
+
+### Security
+
+- Fixed an email header injection vector: a registrant's name flowed into the approval
+  email subject, and a name containing CR/LF could inject extra mail headers (e.g. `Bcc`)
+  or body content. Mail subjects are now stripped of all CR/LF at the lowest level in
+  `Mailer` (`sanitizeHeaderValue`), covering all callers. Recipient addresses were already
+  validated with `FILTER_VALIDATE_EMAIL`.
+- Hardened the admin `status` action to accept `POST` only (GET now redirects back to the
+  list), matching the other state-changing actions. It was already CSRF-protected; this
+  removes the inconsistency.
+
 ## [0.9.0] - 2026-08-28
 
 First tagged release. Covers the complete mailing-list application built so far: an

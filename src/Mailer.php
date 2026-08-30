@@ -22,10 +22,15 @@ final class Mailer
 
         foreach ($recipients as $r) {
             if (!empty($r['name'])) {
-                $body .= "{$r['name']} <{$r['email']}>\n";
+                $line = "{$r['name']} <{$r['email']}>";
             } else {
-                $body .= "{$r['email']}\n";
+                $line = $r['email'];
             }
+            // Append the public note in brackets when present (tags stay CSV-only).
+            if (!empty($r['public_note'])) {
+                $line .= " ({$r['public_note']})";
+            }
+            $body .= $line . "\n";
         }
 
         $body .= "\n---\n";
@@ -97,7 +102,13 @@ final class Mailer
     private function buildRecipientCsv(array $recipients): string
     {
         $handle = fopen('php://memory', 'r+');
-        fputcsv($handle, ['Email', 'Name', __('mail.csv_header_registered')]);
+        fputcsv($handle, [
+            'Email',
+            'Name',
+            __('mail.csv_header_public_note'),
+            __('mail.csv_header_tags'),
+            __('mail.csv_header_registered'),
+        ]);
 
         foreach ($recipients as $r) {
             $registeredAt = '';
@@ -105,7 +116,13 @@ final class Mailer
                 $ts = strtotime($r['created_at']);
                 $registeredAt = $ts !== false ? formatDate($ts) : $r['created_at'];
             }
-            fputcsv($handle, [$r['email'], $r['name'] ?? '', $registeredAt]);
+            fputcsv($handle, [
+                $r['email'],
+                $r['name'] ?? '',
+                $r['public_note'] ?? '',
+                $r['tags'] ?? '',
+                $registeredAt,
+            ]);
         }
 
         rewind($handle);
@@ -120,6 +137,7 @@ final class Mailer
      */
     private function sendWithAttachment(string $to, string $subject, string $body, string $attachmentContent, string $attachmentFilename): bool
     {
+        $subject = $this->sanitizeHeaderValue($subject);
         $boundary = md5(uniqid((string) time()));
 
         $headers = [
@@ -147,6 +165,7 @@ final class Mailer
 
     private function send(string $to, string $subject, string $body): bool
     {
+        $subject = $this->sanitizeHeaderValue($subject);
         $headers = [
             "From: {$this->appName} <{$this->adminEmail}>",
             "Reply-To: {$this->adminEmail}",
@@ -154,5 +173,19 @@ final class Mailer
         ];
 
         return mail($to, $subject, $body, implode("\r\n", $headers));
+    }
+
+    /**
+     * Neutralise header injection.
+     *
+     * The subject is placed in the mail header block by mail(), so any CR/LF a
+     * caller may have folded in from user-supplied data (e.g. a registrant's
+     * name) could inject additional headers (Bcc/Cc) or body content. Subjects
+     * are single-line by definition, so we strip every CR and LF. Applied at the
+     * lowest level so all current and future callers are covered.
+     */
+    private function sanitizeHeaderValue(string $value): string
+    {
+        return str_replace(["\r", "\n"], '', $value);
     }
 }

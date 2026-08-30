@@ -33,6 +33,36 @@ function app_version(): string
 }
 
 /**
+ * Resolve the configured logo value (APP_LOGO) to an <img> src.
+ *
+ * Behaviour:
+ *   - empty / unset  -> returns "" so the caller renders no logo
+ *   - absolute URL   -> returned unchanged (e.g. a CDN-hosted logo)
+ *   - anything else  -> a static asset served from the web root (e.g. "favicon.svg"
+ *                       or "logo.png", served next to favicon.svg), with leading
+ *                       slashes trimmed so it resolves under both supported docroot
+ *                       layouts.
+ *
+ * The shipped .env.example defaults APP_LOGO to "favicon.svg", so a fresh install
+ * shows the bundled favicon; operators can blank it to hide the logo or point it at
+ * their own image.
+ */
+function logoSrc(string $logo): string
+{
+    $logo = trim($logo);
+
+    if ($logo === '') {
+        return '';
+    }
+
+    if (preg_match('#^https?://#i', $logo) === 1) {
+        return $logo;
+    }
+
+    return ltrim($logo, '/');
+}
+
+/**
  * Maximum length (in characters) for the optional comment field.
  */
 const COMMENT_MAX_LENGTH = 500;

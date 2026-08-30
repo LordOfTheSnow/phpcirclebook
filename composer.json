@@ -2,7 +2,7 @@
     "name": "phpcirclebook/app",
     "description": "Self-contained PHP contact directory with admin-gated registration",
     "type": "project",
-    "version": "0.9.0",
+    "version": "1.0.0",
     "license": "MIT",
     "authors": [
         {
@@ -13,7 +13,8 @@
     "require": {
         "php": ">=8.2",
         "ext-intl": "*",
-        "vlucas/phpdotenv": "^5.6"
+        "vlucas/phpdotenv": "^5.6",
+        "league/commonmark": "^2.10"
     },
     "autoload": {
         "psr-4": {

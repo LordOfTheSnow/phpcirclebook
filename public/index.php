@@ -8,6 +8,7 @@ require __DIR__ . '/../src/helpers.php';
 use App\Database;
 use App\Mailer;
 use App\RateLimiter;
+use App\SidebarContent;
 use App\TokenService;
 use App\Translator;
 use Dotenv\Dotenv;
@@ -25,6 +26,9 @@ $hmacSecret = $_ENV['HMAC_SECRET'];
 $dbPath = dirname(__DIR__) . '/' . $_ENV['DB_PATH'];
 $appLocale = $_ENV['APP_LOCALE'];
 $appDescription = $_ENV['APP_DESCRIPTION'] ?? '';
+$appFooter = $_ENV['APP_FOOTER'] ?? '';
+$sidebarSide = strtolower(trim($_ENV['SIDEBAR_SIDE'] ?? '')) === 'left' ? 'left' : 'right';
+$appLogo = trim($_ENV['APP_LOGO'] ?? '');
 
 // Initialise translator
 Translator::init($appLocale, dirname(__DIR__) . '/lang');
@@ -57,7 +61,23 @@ match ($action) {
 
 function handleHome(): void
 {
-    renderPage('form.php');
+    $contentDir = dirname(__DIR__) . '/content';
+    $renderer = new SidebarContent();
+
+    // Each card renders only if its content file exists and is non-empty.
+    $cards = [];
+
+    $eventsHtml = $renderer->renderFile($contentDir . '/events.md');
+    if ($eventsHtml !== '') {
+        $cards[] = ['title' => __('sidebar.events_title'), 'body' => $eventsHtml];
+    }
+
+    $linksHtml = $renderer->renderFile($contentDir . '/links.md');
+    if ($linksHtml !== '') {
+        $cards[] = ['title' => __('sidebar.links_title'), 'body' => $linksHtml];
+    }
+
+    renderPage('form.php', ['sidebarCards' => $cards]);
 }
 
 function handleSubmit(): void
@@ -217,12 +237,18 @@ function handleConfirmUnsubscribe(): void
 
 function renderPage(string $template, array $vars = []): void
 {
-    global $appName, $appUrl, $appDescription, $adminEmail;
+    global $appName, $appUrl, $appDescription, $appFooter, $adminEmail, $sidebarSide, $appLogo;
 
     $vars['appName'] = $appName;
     $vars['appUrl'] = $appUrl;
     $vars['appDescription'] = $appDescription;
+    $vars['appFooter'] = $appFooter;
     $vars['adminEmail'] = $adminEmail;
+    $vars['sidebarSide'] = $sidebarSide;
+    $vars['appLogo'] = $appLogo;
+    // Pages other than the form don't provide sidebar cards; default to none so
+    // they render single-column.
+    $vars['sidebarCards'] = $vars['sidebarCards'] ?? [];
     extract($vars);
 
     ob_start();

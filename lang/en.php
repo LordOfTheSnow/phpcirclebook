@@ -21,6 +21,10 @@ return [
     'form.explanation'       => 'Enter your email to receive the recipient list. If you\'re not yet registered, your request will be forwarded to the administrator for approval.',
     'form.disclaimer'        => 'By subscribing to the list, you allow the other members to see your email address. If you don\'t want that, please don\'t subscribe.',
 
+    // --- Sidebar cards (templates/form.php) ---
+    'sidebar.events_title'   => 'Upcoming events',
+    'sidebar.links_title'    => 'Links',
+
     // --- Unsubscribe page (templates/unsubscribe.php) ---
     'unsubscribe.heading'    => 'Unsubscribe',
     'unsubscribe.confirm'    => 'Are you sure you want to unsubscribe {email} from {appName}?',
@@ -48,6 +52,8 @@ return [
     'mail.list_total'        => 'Total: {count} recipient(s)',
     'mail.list_unsubscribe'  => 'To unsubscribe from this list:',
 
+    'mail.csv_header_public_note' => 'Public note',
+    'mail.csv_header_tags'       => 'Tags',
     'mail.csv_header_registered' => 'Registered',
 
     // --- Email: Approval request to admin ---

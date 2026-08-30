@@ -1,0 +1,18 @@
+<!--
+  Links card for the sidebar.
+
+  Copy this file to `links.md` in the same directory to enable the card:
+      cp content/links.md.example content/links.md
+
+  The card shows only when content/links.md exists and is non-empty.
+  Content is Markdown, rendered in safe mode (raw HTML is stripped and
+  unsafe links are removed). The card title comes from the translation key
+  `sidebar.links_title`, so do NOT add a top-level heading here.
+
+  Links open in a new tab automatically (target="_blank", rel="noopener
+  noreferrer") — just write a normal Markdown link.
+-->
+
+- [Our website](https://example.com)
+- [Photo archive](https://example.com/photos)
+- [Frequently asked questions](https://example.com/faq)
