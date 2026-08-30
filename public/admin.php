@@ -193,7 +193,11 @@ switch ($action) {
         }
         break;
     case 'status':
-        handle_status();
+        if ($method === 'POST') {
+            handle_status();
+        } else {
+            redirect_admin();
+        }
         break;
     case 'delete':
         if ($method === 'POST') {
@@ -378,13 +382,35 @@ function render_login(?string $error = null): void
     {$errorHtml}
     <form method="post" action="admin.php?action=login">
         <input type="hidden" name="csrf_token" value="{$token}">
-        <label for="password">
-            Password
+        <label for="password">Password</label>
+        <div class="password-field">
             <input type="password" id="password" name="password" required autofocus autocomplete="current-password">
-        </label>
+            <button type="button" class="password-toggle" aria-pressed="false" aria-controls="password" aria-label="Show password" title="Show password">
+                <svg class="icon-eye" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M1 12s4-7 11-7 11 7 11 7-4 7-11 7-11-7-11-7z"/><circle cx="12" cy="12" r="3"/></svg>
+                <svg class="icon-eye-off" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-7-11-7a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 7 11 7a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><line x1="1" y1="1" x2="23" y2="23"/></svg>
+            </button>
+        </div>
         <button type="submit">Log in</button>
     </form>
 </article>
+<script>
+    (function () {
+        var toggle = document.querySelector('.password-toggle');
+        var input = document.getElementById('password');
+        if (!toggle || !input) {
+            return;
+        }
+        toggle.addEventListener('click', function () {
+            var showing = input.type === 'text';
+            input.type = showing ? 'password' : 'text';
+            toggle.setAttribute('aria-pressed', showing ? 'false' : 'true');
+            var label = showing ? 'Show password' : 'Hide password';
+            toggle.setAttribute('aria-label', label);
+            toggle.setAttribute('title', label);
+            input.focus();
+        });
+    })();
+</script>
 HTML;
 
     render_page('Admin Login', $body);
@@ -641,13 +667,107 @@ function render_page(string $title, string $content): void
             font-size: 0.8rem;
             white-space: nowrap;
         }
+
+        /* Password field with a show/hide toggle button at the right edge. */
+        .password-field {
+            position: relative;
+            /* Restore the spacing Pico normally puts below the input (which we
+               zero out below so the wrapper hugs the input for centering). */
+            margin-bottom: var(--pico-spacing, 1rem);
+        }
+
+        .password-field input {
+            /* Leave room for the toggle button so text doesn't run under it. */
+            padding-right: 3rem;
+            /* Drop Pico's bottom margin here so the wrapper hugs the input box;
+               otherwise the toggle (sized to the wrapper) sits too low. */
+            margin-bottom: 0;
+        }
+
+        .password-toggle {
+            position: absolute;
+            top: 0;
+            right: 0;
+            height: 100%;
+            width: 2.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: 0;
+            margin: 0;
+            border: none;
+            background: none;
+            color: #6b7680;
+            cursor: pointer;
+            box-shadow: none;
+        }
+
+        .password-toggle:hover,
+        .password-toggle:focus {
+            color: #0159a3;
+            background: none;
+        }
+
+        .password-toggle svg {
+            width: 1.25rem;
+            height: 1.25rem;
+            display: block;
+        }
+
+        /* Show the "hidden" (eye-off) icon only while the password is visible. */
+        .password-toggle .icon-eye-off { display: none; }
+        .password-toggle[aria-pressed="true"] .icon-eye { display: none; }
+        .password-toggle[aria-pressed="true"] .icon-eye-off { display: block; }
+
+        /* "powered by" attribution link in the header. */
+        .app-header-bar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 1rem;
+            margin-bottom: 2rem;
+        }
+
+        .app-header-bar h1 { margin: 0; color: #0159a3; }
+
+        .app-version {
+            font-size: 0.75rem;
+            color: #6b7680;
+            white-space: nowrap;
+        }
+
+        .app-version a {
+            color: #0159a3;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.3rem;
+        }
+
+        .app-version .gh-icon { flex-shrink: 0; }
+
+        @media (max-width: 480px) {
+            .app-header-bar {
+                flex-direction: column;
+                align-items: flex-start;
+                gap: 0.25rem;
+            }
+
+            .app-version { white-space: normal; }
+            .app-version a { flex-wrap: wrap; }
+        }
     </style>
 </head>
 <body>
     <main class="container">
-        <header style="display:flex; justify-content:space-between; align-items:center; margin-bottom:2rem;">
-            <h1 style="margin:0; color:#0159a3;">{$appNameHtml} <small style="font-size:0.6em;">admin</small></h1>
-            <small><a href="https://github.com/LordOfTheSnow/phpcirclebook" target="_blank">PHPCircleBook v{$version}</a></small>
+        <header class="app-header-bar">
+            <h1>{$appNameHtml} <small style="font-size:0.6em;">admin</small></h1>
+            <small class="app-version">
+                powered by
+                <a href="https://github.com/LordOfTheSnow/phpcirclebook" target="_blank" rel="noopener">
+                    PHPCircleBook v{$version}
+                    <svg class="gh-icon" viewBox="0 0 16 16" width="14" height="14" aria-hidden="true" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27.68 0 1.36.09 2 .27 1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+                </a>
+            </small>
         </header>
         <p><a href="{$homeUrl}">&larr; Back to {$appNameHtml}</a></p>
         {$content}

@@ -1,6 +1,6 @@
 # PHPCircleBook
 
-[![Version](https://img.shields.io/badge/version-0.9.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg?logo=php&logoColor=white)](https://www.php.net/)
 [![SQLite](https://img.shields.io/badge/SQLite-embedded-003B57.svg?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![No build step](https://img.shields.io/badge/build-none-brightgreen.svg)](#requirements)
@@ -15,6 +15,9 @@ Members of a group (alumni, clubs, communities) can apply to join. Once approved
 - Admin-gated registration via email approval links
 - Self-service list retrieval for approved recipients (with CSV attachment)
 - Configurable info card on the main page (via `APP_DESCRIPTION` in `.env`)
+- Optional footer line on the main form (via `APP_FOOTER` in `.env`)
+- Optional sidebar on the main form with "Upcoming events" and "Links" cards, written in Markdown (see [Sidebar](#sidebar))
+- Logo beside the app name in the header — the shipped favicon by default, customisable or hidden via `APP_LOGO` in `.env`
 - Obfuscated admin contact email (anti-harvesting)
 - CLI import tool for bulk-adding existing members
 - Optional admin tool (web + CLI) to read, add, edit, and remove recipients
@@ -122,9 +125,21 @@ DB_PATH="data/mailinglist.db"
 APP_LOCALE="en_US"
 APP_DESCRIPTION="Describe your mailing list here. This text is shown to visitors on the main page."
 
+# Optional. A footer line shown at the bottom of the main form. Leave empty to hide it.
+APP_FOOTER=""
+
+# Optional. Which side of the main form the sidebar appears on: "left" or "right".
+# Defaults to "right" when unset or invalid. The sidebar only shows when at least
+# one of content/events.md or content/links.md exists and is non-empty.
+SIDEBAR_SIDE="right"
+# Optional. Logo left of the app name (a filename served from public/, or an https URL).
+# Defaults to the shipped favicon.svg; leave empty to show no logo.
+APP_LOGO="favicon.svg"
+
 # Admin tool (public/admin.php) — see the "Admin tool" section below.
 # Required only if you use the web admin. Generate with: php bin/hash-password.php
 ADMIN_PASSWORD_HASH=""
+
 # Optional; only for hosts behind a TLS-terminating proxy.
 # Only set it to true if you deploy behind a TLS-terminating proxy and find the admin session isn't sticking / the cookie isn't Secure despite being on HTTPS.
 ADMIN_FORCE_SECURE_COOKIE=false
@@ -170,8 +185,57 @@ test the full email flow locally.
 | `DB_PATH` | Path to SQLite database file (relative to project root) |
 | `APP_LOCALE` | ICU locale code (e.g. `de_DE`, `en_US`, `fr_FR`) |
 | `APP_DESCRIPTION` | Custom text shown on the info card (optional, can be left empty) |
+| `APP_FOOTER` | Footer line shown at the bottom of the main form (optional, can be left empty) |
+| `SIDEBAR_SIDE` | Which side of the main form the sidebar appears on: `left` or `right` (optional, defaults to `right`). See [Sidebar](#sidebar) |
+| `APP_LOGO` | Optional logo shown left of the app name in the header. A filename served from `public/` (e.g. `logo.png`) or an absolute `https` URL. Auto-scales to the header height (may exceed it by up to 40px). Defaults to the shipped `favicon.svg`; leave empty for no logo |
 | `ADMIN_PASSWORD_HASH` | bcrypt hash of the admin password for the web admin tool (see [Admin tool](#admin-tool)). Required only if you use `public/admin.php` |
 | `ADMIN_FORCE_SECURE_COOKIE` | Optional. Force the admin session cookie to `Secure` when your host terminates TLS at an upstream proxy and forwards plain HTTP to PHP. Leave unset (`false`) for normal setups |
+
+## Sidebar
+
+The main form can show an optional sidebar with up to two cards:
+
+- **Upcoming events** — sourced from `content/events.md`
+- **Links** — sourced from `content/links.md`
+
+Each card appears only when its file exists and is non-empty. If neither file is
+present, no sidebar renders and the form spans the full width. The sidebar shows
+on the main form page only; message and unsubscribe pages stay single-column.
+
+To enable a card, copy the shipped example and edit it:
+
+```bash
+cp content/events.md.example content/events.md
+cp content/links.md.example content/links.md
+```
+
+The files are **Markdown**, rendered with
+[`league/commonmark`](https://commonmark.thephpleague.com/). Rendering runs in a
+hardened mode: raw HTML is stripped and unsafe links are removed, so only Markdown
+markup is honoured. Write plain Markdown, for example:
+
+```markdown
+- **12 Sep 2026** — Autumn get-together
+- [Our website](https://example.com)
+```
+
+Do not add a top-level heading in the file — the card title comes from the
+translatable keys `sidebar.events_title` / `sidebar.links_title` in `lang/`.
+
+Links in either card open in a new tab automatically (`target="_blank"` with
+`rel="noopener noreferrer"`), so you just write a normal Markdown link.
+
+Choose the side with `SIDEBAR_SIDE` in `.env` (`left` or `right`, default `right`).
+On screens narrower than 768px the sidebar stacks below the form.
+
+Your real `content/*.md` files are git-ignored (only the `*.md.example` templates
+are committed), and the `content/` directory is blocked from direct HTTP access —
+keep it out of the web root, the same as `data/` and `.env`.
+
+> **Future extension:** sidebar content is file-based today. A later iteration
+> could store it in the database and make it editable through the admin tool
+> (see [ADR-003](docs/adr-003-admin-tool.md)), reusing the same safe Markdown
+> renderer. Not implemented yet.
 
 ## Admin tool
 
@@ -273,9 +337,11 @@ phpcirclebook/
 │   ├── RateLimiter.php     # Per-IP and per-email throttling
 │   ├── TokenService.php    # Approval + unsubscribe token generation
 │   ├── Translator.php      # Translation loader with fallback
+│   ├── SidebarContent.php  # Renders sidebar Markdown content files (safe mode)
 │   └── helpers.php         # app_version(), __(), formatDate(), formatNumber(), obfuscateEmail()
 ├── templates/              # PHP templates (form, layout, message, unsubscribe)
 ├── lang/                   # Translation files (one PHP array per locale)
+├── content/                # Optional sidebar Markdown (events.md, links.md); *.md.example ship as templates
 ├── bin/
 │   ├── admin.php           # CLI: manage recipients (list/add/edit/status/delete)
 │   ├── hash-password.php   # CLI: generate the admin password hash

@@ -137,6 +137,7 @@ final class Mailer
      */
     private function sendWithAttachment(string $to, string $subject, string $body, string $attachmentContent, string $attachmentFilename): bool
     {
+        $subject = $this->sanitizeHeaderValue($subject);
         $boundary = md5(uniqid((string) time()));
 
         $headers = [
@@ -164,6 +165,7 @@ final class Mailer
 
     private function send(string $to, string $subject, string $body): bool
     {
+        $subject = $this->sanitizeHeaderValue($subject);
         $headers = [
             "From: {$this->appName} <{$this->adminEmail}>",
             "Reply-To: {$this->adminEmail}",
@@ -171,5 +173,19 @@ final class Mailer
         ];
 
         return mail($to, $subject, $body, implode("\r\n", $headers));
+    }
+
+    /**
+     * Neutralise header injection.
+     *
+     * The subject is placed in the mail header block by mail(), so any CR/LF a
+     * caller may have folded in from user-supplied data (e.g. a registrant's
+     * name) could inject additional headers (Bcc/Cc) or body content. Subjects
+     * are single-line by definition, so we strip every CR and LF. Applied at the
+     * lowest level so all current and future callers are covered.
+     */
+    private function sanitizeHeaderValue(string $value): string
+    {
+        return str_replace(["\r", "\n"], '', $value);
     }
 }

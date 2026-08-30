@@ -73,6 +73,14 @@ Added: `getAllRecipients()`, `findRecipientById()`, `updateRecipient(int $id, ar
 ### 16. Schema Migration Style
 Both new columns are added through the existing idempotent `ALTER TABLE ... ADD COLUMN` pattern in `Database::migrate()`, consistent with how the `comment` column was introduced.
 
+### 17a. Mail Header Injection Defence
+
+All email subjects are stripped of CR/LF at the lowest level of `App\Mailer` (`sanitizeHeaderValue`, applied in both `send()` and `sendWithAttachment()`). This closes a header-injection vector where a registrant-supplied name flowed into the approval email subject: a name containing `\r\n` could otherwise inject additional mail headers (`Bcc`/`Cc`) or extra body content. Recipient addresses are separately constrained by `FILTER_VALIDATE_EMAIL`. Sanitising at the transport layer, rather than at each call site, keeps every current and future caller covered.
+
+### 17b. State-Changing Admin Actions Are POST-Only
+
+Every admin action that mutates state (`login`, `add`, `edit`, `status`, `delete`) requires `POST`; a `GET` to these routes renders the relevant form/confirmation or redirects to the list rather than acting. Combined with the per-session CSRF token (decision 8), this prevents state changes via crafted links or cross-site GETs.
+
 ### 17. i18n Scope: Admin Tool Is English-Only
 The web admin UI and the CLI output are not translated. ADR-002's translatability requirement targets visitor-facing text; the admin panel is a single-operator tool. Translated `public_note` content is data typed by the operator, not UI chrome.
 

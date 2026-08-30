@@ -15,11 +15,15 @@ return [
     'form.name_label'        => 'Name (optional)',
     'form.name_placeholder'  => 'Dein Name',
     'form.comment_label'     => 'Kommentar (optional, max. {max} Zeichen)',
-    'form.comment_placeholder' => 'Was der Administrator wissen sollte',
+    'form.comment_placeholder' => 'Was der Administrator wissen sollte (nicht sichtbar für alle anderen)',
     'form.honeypot_label'    => 'Dieses Feld leer lassen',
     'form.submit'            => 'Liste anfordern',
     'form.explanation'       => 'Gib deine E-Mail-Adresse ein, um die Empfängerliste zu erhalten. Falls du noch nicht registriert bist, wird deine Anfrage zur Genehmigung an den Administrator weitergeleitet.',
     'form.disclaimer'        => 'Wenn du dich in die Liste einträgst, können die anderen Mitglieder deine E-Mail-Adresse sehen. Wenn du das nicht möchtest, trage dich bitte nicht ein.',
+
+    // --- Sidebar-Karten (templates/form.php) ---
+    'sidebar.events_title'   => 'Kommende Termine',
+    'sidebar.links_title'    => 'Links',
 
     // --- Abmeldung (templates/unsubscribe.php) ---
     'unsubscribe.heading'    => 'Abmelden',
@@ -44,7 +48,7 @@ return [
 
     // --- E-Mail: Empfängerliste (src/Mailer.php) ---
     'mail.list_subject'      => '[{appName}] Empfängerliste',
-    'mail.list_intro'        => 'Hier ist die aktuelle Empfängerliste für {appName}:',
+    'mail.list_intro'        => 'Hier ist die aktuelle Empfängerliste für [{appName}]:',
     'mail.list_total'        => 'Insgesamt: {count} Empfänger',
     'mail.list_unsubscribe'  => 'Um dich von dieser Liste abzumelden:',
 

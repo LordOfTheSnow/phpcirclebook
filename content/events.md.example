@@ -1,0 +1,18 @@
+<!--
+  Upcoming Events card for the sidebar.
+
+  Copy this file to `events.md` in the same directory to enable the card:
+      cp content/events.md.example content/events.md
+
+  The card shows only when content/events.md exists and is non-empty.
+  Content is Markdown, rendered in safe mode (raw HTML is stripped and
+  unsafe links are removed). The card title comes from the translation key
+  `sidebar.events_title`, so do NOT add a top-level heading here.
+
+  Links open in a new tab automatically (target="_blank", rel="noopener
+  noreferrer") — just write a normal Markdown link.
+-->
+
+- **12 Sep 2026** — Autumn get-together, 18:00 at the community hall
+- **04 Oct 2026** — Guided city walk, meet at the main square
+- **20 Dec 2026** — Year-end dinner ([reserve a seat](https://example.com/reserve))

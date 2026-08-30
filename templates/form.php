@@ -1,5 +1,5 @@
 <article>
-    <header><strong><?= __('info.title') ?></strong></header>
+    <header class="card-title"><?= __('info.title') ?></header>
     <p><?= __('info.intro') ?></p>
     <?php if (!empty($appDescription)): ?>
         <p><?= htmlspecialchars($appDescription) ?></p>
@@ -36,3 +36,8 @@
     </fieldset>
 </form>
 <p><small><?= __('form.explanation') ?></small></p>
+
+<?php if (!empty($appFooter)): ?>
+    <hr class="app-footer-divider">
+    <footer class="app-footer"><small><?= htmlspecialchars($appFooter) ?></small></footer>
+<?php endif; ?>

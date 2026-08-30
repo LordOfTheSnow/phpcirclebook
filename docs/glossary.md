@@ -122,3 +122,28 @@ The `comment` column: free text a registrant optionally provides for the admin d
 
 **Tags**  
 The `tags` column: a single free-text field for ad-hoc taxonomy or categorisation of a recipient. Included as a column in the CSV attachment of the shared list, but kept out of the plain-text email body to avoid clutter.
+
+---
+
+## Sidebar
+
+**Sidebar**  
+An optional second column shown next to the registration form on the main form page only. It holds up to two cards — the *Events Card* and the *Links Card* — and appears only when at least one card is configured. Its side (left or right of the form) is set by `SIDEBAR_SIDE`. On narrow screens the sidebar stacks below the form.
+
+**Events Card**  
+The "Upcoming Events" card in the sidebar. Its body is rendered from `content/events.md`; its title comes from the translatable key `sidebar.events_title`. Renders only if `content/events.md` exists and is non-empty.
+
+**Links Card**  
+The "Links" card in the sidebar. Its body is rendered from `content/links.md`; its title comes from the translatable key `sidebar.links_title`. Renders only if `content/links.md` exists and is non-empty.
+
+**Content File**  
+An operator-authored Markdown file under `content/` (`events.md`, `links.md`) supplying a sidebar card's body. Treated as trusted, server-side content but rendered in safe mode (raw HTML stripped, unsafe links disallowed). Example templates ship as `content/*.md.example`; the real files are git-ignored and must not be reachable over HTTP.
+
+**`SIDEBAR_SIDE`**  
+The `.env` entry choosing which side of the form the sidebar appears on: `left` or `right`. Optional; unset or invalid values fall back to `right`. There is no separate on/off switch — the sidebar shows only when a card is configured.
+
+**`APP_LOGO`**  
+The optional `.env` entry for a header logo shown left of the app name on the main page, resolved to an `<img>` src by the `logoSrc()` helper. Empty or unset shows no logo; any value is used as the logo — either a filename served from `public/` (e.g. `favicon.svg`, `logo.png`) or an absolute `https` URL. The shipped `.env.example` defaults it to `favicon.svg`. The logo auto-scales to the header height and may exceed it by at most 40px; when taller than the title, the header row grows and its contents stay vertically centred. See [ADR-005](adr-005-header-logo.md).
+
+**Sidebar Content Renderer**  
+The `App\SidebarContent` class. Configures a `league/commonmark` converter once in safe mode and exposes `renderFile(string $path): string`, returning the card's HTML or an empty string when the file is absent, empty, or fails to read/parse (fail-safe). Links in the rendered output open in a new tab (`target="_blank"` plus `rel="noopener noreferrer"`) via CommonMark's `ExternalLinkExtension`. Rendering is done per request; there is no caching.

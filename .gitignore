@@ -2,3 +2,6 @@
 /.env
 /data/*.db
 import.csv
+
+# Operator-authored sidebar content; the *.md.example templates stay tracked.
+/content/*.md

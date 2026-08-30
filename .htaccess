@@ -20,7 +20,7 @@ RewriteEngine On
 
 # Block direct HTTP access to the non-public directories. These are served by PHP
 # via require/include, but must never be reachable as URLs.
-RewriteRule ^(vendor|src|templates|lang|bin|data|docs|\.git|\.github)(/|$) - [F,L]
+RewriteRule ^(vendor|src|templates|lang|bin|data|docs|content|\.git|\.github)(/|$) - [F,L]
 
 # --- 2. Front-controller routing -----------------------------------------------
 
