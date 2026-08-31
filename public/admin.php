@@ -365,7 +365,16 @@ function handle_delete(): void
     csrf_check();
 
     $id = (int) ($_POST['id'] ?? 0);
+
+    // Look up who is being removed before the row is gone, so the log can record it.
+    $recipient = $db->findRecipientById($id);
+
     $db->deleteRecipientById($id);
+
+    if ($recipient !== null) {
+        $db->addLog('deleted', 'Admin deleted ' . logActor($recipient['email'], $recipient['name']));
+    }
+
     redirect_admin('msg=deleted');
 }
 
@@ -424,6 +433,7 @@ function render_list(): void
     $token = e(csrf_token());
 
     $flash = flash_message();
+    $logSection = render_log_section();
 
     $rows = '';
     if ($recipients === []) {
@@ -470,9 +480,53 @@ function render_list(): void
     </tbody>
 </table>
 </figure>
+{$logSection}
 HTML;
 
     render_page('Admin', $body);
+}
+
+/**
+ * Activity log shown at the bottom of the admin list, newest entry first, in a
+ * fixed-height scrollable container. Renders nothing but an empty-state row when
+ * there are no entries yet.
+ */
+function render_log_section(): string
+{
+    global $db;
+
+    $logs = $db->getLogs();
+
+    if ($logs === []) {
+        $rows = '<tr><td colspan="3"><em>No activity yet.</em></td></tr>';
+    } else {
+        $rows = '';
+        foreach ($logs as $entry) {
+            // Stored timestamps are UTC; show them in the application timezone
+            // (APP_TIMEZONE, or the server default). Admin is English-only and
+            // does not initialise the translator, so we use plain formatting.
+            $when = formatLocalTime((string) $entry['created_at']);
+            $rows .= '<tr>'
+                . '<td style="white-space:nowrap;">' . e($when) . '</td>'
+                . '<td>' . e((string) $entry['event']) . '</td>'
+                . '<td>' . e((string) $entry['detail']) . '</td>'
+                . '</tr>';
+        }
+    }
+
+    return <<<HTML
+<h2 style="margin-top:2.5rem;">Activity log</h2>
+<div class="log-scroll">
+<table class="admin-table">
+    <thead>
+        <tr><th>When</th><th>Event</th><th>Detail</th></tr>
+    </thead>
+    <tbody>
+        {$rows}
+    </tbody>
+</table>
+</div>
+HTML;
 }
 
 function status_badge(string $status): string
@@ -648,6 +702,27 @@ function render_page(string $title, string $content): void
         .container { max-width: 1140px; }
 
         .admin-table td, .admin-table th { vertical-align: middle; }
+
+        /*
+         * Activity log: fixed-height, vertically scrollable so a full 200-row log
+         * never pushes the rest of the page down. The header stays visible while
+         * the body scrolls.
+         */
+        .log-scroll {
+            max-height: 22rem;
+            overflow-y: auto;
+            border: 1px solid #dfe4ea;
+            border-radius: 8px;
+        }
+
+        .log-scroll table { margin-bottom: 0; }
+
+        .log-scroll thead th {
+            position: sticky;
+            top: 0;
+            background: #fff;
+            z-index: 1;
+        }
 
         .row-actions {
             display: flex;

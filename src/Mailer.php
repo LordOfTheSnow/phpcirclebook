@@ -26,11 +26,23 @@ final class Mailer
             } else {
                 $line = $r['email'];
             }
-            // Append the public note in brackets when present (tags stay CSV-only).
-            if (!empty($r['public_note'])) {
-                $line .= " ({$r['public_note']})";
-            }
+            // Keep this list clean (name + email only) so it can be copied
+            // straight into an email client. Public notes go in a separate
+            // section below.
             $body .= $line . "\n";
+        }
+
+        // Public notes as a separate list, so the recipient list above stays a
+        // clean, copy-pasteable set of addresses. Only recipients that actually
+        // have a note appear here.
+        $noted = array_filter($recipients, static fn ($r) => !empty($r['public_note']));
+        if ($noted !== []) {
+            $body .= "\n---\n\n";
+            $body .= __('mail.list_notes_heading') . "\n\n";
+            foreach ($noted as $r) {
+                $name = !empty($r['name']) ? $r['name'] : $r['email'];
+                $body .= "{$name} ({$r['email']}): {$r['public_note']}\n";
+            }
         }
 
         $body .= "\n---\n";

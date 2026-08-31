@@ -55,6 +55,18 @@ final class Database
             ON rate_limits (key, created_at)
         ");
 
+        // Activity log (bounded, newest-first) shown on the admin page.
+        // event: a short machine key (e.g. 'application', 'approved').
+        // detail: a human-readable line (who did what), already composed.
+        $this->pdo->exec("
+            CREATE TABLE IF NOT EXISTS logs (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event TEXT NOT NULL,
+                detail TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT (datetime('now'))
+            )
+        ");
+
         // Add optional columns for existing databases (idempotent).
         $this->addColumnIfMissing('recipients', 'comment', "TEXT DEFAULT NULL");
         // public_note: admin-curated annotation, visible to list recipients (ADR-003).
@@ -102,6 +114,31 @@ final class Database
     {
         $stmt = $this->pdo->query("SELECT email, name, public_note, tags, created_at FROM recipients WHERE status = 'approved' ORDER BY name, email");
         return $stmt->fetchAll();
+    }
+
+    /**
+     * Public list statistics for the home page: how many recipients are on the
+     * list and when it last changed.
+     *
+     * - count:       number of approved recipients (the people actually on the list)
+     * - last_update: the most recent updated_at among approved recipients, as a
+     *                'YYYY-MM-DD HH:MM:SS' UTC string, or null when the list is empty.
+     *
+     * @return array{count:int, last_update:?string}
+     */
+    public function getListStats(): array
+    {
+        $stmt = $this->pdo->query("
+            SELECT COUNT(*) AS cnt, MAX(updated_at) AS last_update
+            FROM recipients
+            WHERE status = 'approved'
+        ");
+        $row = $stmt->fetch();
+
+        return [
+            'count' => (int) ($row['cnt'] ?? 0),
+            'last_update' => $row['last_update'] ?? null,
+        ];
     }
 
     public function createRecipient(string $email, ?string $name, ?string $comment, string $token, string $expiresAt): void
@@ -263,6 +300,49 @@ final class Database
     {
         $stmt = $this->pdo->prepare("DELETE FROM recipients WHERE email = :email");
         $stmt->execute(['email' => $email]);
+    }
+
+    // --- Activity log ---
+
+    /**
+     * Maximum number of log rows retained. Older rows are pruned on each insert
+     * so the table (and the admin view) stays bounded.
+     */
+    private const LOG_RETENTION = 200;
+
+    /**
+     * Append an activity log entry and prune the table back to the newest
+     * LOG_RETENTION rows.
+     *
+     * @param string $event  Short machine key, e.g. 'application', 'approved'.
+     * @param string $detail Human-readable line describing who did what.
+     */
+    public function addLog(string $event, string $detail = ''): void
+    {
+        $stmt = $this->pdo->prepare("INSERT INTO logs (event, detail) VALUES (:event, :detail)");
+        $stmt->execute(['event' => $event, 'detail' => $detail]);
+
+        // Keep only the newest LOG_RETENTION rows. id is monotonic, so the
+        // retention cutoff is the id of the Nth-newest row.
+        $this->pdo->exec("
+            DELETE FROM logs
+            WHERE id NOT IN (
+                SELECT id FROM logs ORDER BY id DESC LIMIT " . self::LOG_RETENTION . "
+            )
+        ");
+    }
+
+    /**
+     * Return log entries, newest first (at most LOG_RETENTION rows).
+     *
+     * @return list<array{id:int, event:string, detail:string, created_at:string}>
+     */
+    public function getLogs(): array
+    {
+        $stmt = $this->pdo->query(
+            "SELECT id, event, detail, created_at FROM logs ORDER BY id DESC LIMIT " . self::LOG_RETENTION
+        );
+        return $stmt->fetchAll();
     }
 
     // --- Rate limiting ---

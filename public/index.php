@@ -77,7 +77,10 @@ function handleHome(): void
         $cards[] = ['title' => __('sidebar.links_title'), 'body' => $linksHtml];
     }
 
-    renderPage('form.php', ['sidebarCards' => $cards]);
+    global $db;
+    $listStats = $db->getListStats();
+
+    renderPage('form.php', ['sidebarCards' => $cards, 'listStats' => $listStats]);
 }
 
 function handleSubmit(): void
@@ -123,6 +126,7 @@ function handleSubmit(): void
         $expires = $tokenService->approvalTokenExpiry();
         $db->createRecipient($email, $name, $comment, $token, $expires);
         $mailer->sendApprovalRequest($email, $name, $comment, $token);
+        $db->addLog('application', logActor($email, $name) . ' applied to join the list');
         renderMessage(__('message.generic_thanks'));
         return;
     }
@@ -141,6 +145,7 @@ function handleSendList(string $email): void
 
     $recipients = $db->getApprovedRecipients();
     $mailer->sendList($email, $recipients);
+    $db->addLog('list_request', logActor($email) . ' requested the recipient list');
     renderMessage(__('message.list_sent'));
 }
 
@@ -174,6 +179,7 @@ function handleApprove(): void
 
     $db->approveRecipient((int) $recipient['id']);
     $mailer->sendApprovalConfirmation($recipient['email'], $recipient['name']);
+    $db->addLog('approved', 'Admin approved ' . logActor($recipient['email'], $recipient['name']));
     renderMessage(__('message.approved', ['email' => $recipient['email']]));
 }
 
@@ -194,6 +200,7 @@ function handleReject(): void
     }
 
     $db->rejectRecipient((int) $recipient['id']);
+    $db->addLog('rejected', 'Admin rejected ' . logActor($recipient['email'], $recipient['name']));
     renderMessage(__('message.rejected', ['email' => $recipient['email']]));
 }
 

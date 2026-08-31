@@ -93,8 +93,13 @@ function formatDate(
     $locale = Translator::getInstance()->getLocale();
     $formatter = new \IntlDateFormatter($locale, $dateStyle, $timeStyle);
 
+    // IntlDateFormatter::format() ignores the timezone carried by a DateTime
+    // object and uses the formatter's own timezone (PHP's default). To honour the
+    // caller's intent — e.g. a value already converted to APP_TIMEZONE — set the
+    // formatter's timezone from the object. A bare Unix timestamp carries no zone
+    // intent, so it keeps the formatter default.
     if ($value instanceof \DateTimeInterface) {
-        return $formatter->format($value);
+        $formatter->setTimeZone($value->getTimezone());
     }
 
     return $formatter->format($value);
@@ -121,6 +126,62 @@ function formatNumber(
     }
 
     return $formatter->format($value);
+}
+
+/**
+ * Resolve the timezone used to display stored timestamps.
+ *
+ * Timestamps are stored in UTC (SQLite datetime('now')). For display we convert
+ * to the timezone named by the APP_TIMEZONE env var (e.g. "Europe/Berlin"). When
+ * it is unset, empty, or not a valid identifier, we fall back to PHP's default
+ * timezone (date_default_timezone_get()), i.e. the server's configured zone.
+ */
+function appTimezone(): \DateTimeZone
+{
+    static $tz = null;
+
+    if ($tz !== null) {
+        return $tz;
+    }
+
+    $configured = trim((string) ($_ENV['APP_TIMEZONE'] ?? ''));
+
+    if ($configured !== '') {
+        try {
+            return $tz = new \DateTimeZone($configured);
+        } catch (\Exception) {
+            // Invalid identifier — fall through to the server default rather than
+            // failing the whole page over a config typo.
+        }
+    }
+
+    return $tz = new \DateTimeZone(date_default_timezone_get());
+}
+
+/**
+ * Format a stored UTC timestamp string ('YYYY-MM-DD HH:MM:SS') for display in the
+ * application timezone (see appTimezone()). Returns the raw input unchanged if it
+ * cannot be parsed.
+ */
+function formatLocalTime(string $utcTimestamp, string $format = 'Y-m-d H:i'): string
+{
+    try {
+        $dt = new \DateTimeImmutable($utcTimestamp, new \DateTimeZone('UTC'));
+    } catch (\Exception) {
+        return $utcTimestamp;
+    }
+
+    return $dt->setTimezone(appTimezone())->format($format);
+}
+
+/**
+ * Format an actor ("who") for an activity log line: "Name <email>" when a name
+ * is present, otherwise just the email address.
+ */
+function logActor(string $email, ?string $name = null): string
+{
+    $name = $name !== null ? trim($name) : '';
+    return $name !== '' ? "{$name} <{$email}>" : $email;
 }
 
 /**

@@ -8,6 +8,35 @@ project's first tagged version — 0.9.0 covers everything built so far, pre-1.0
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-08-31
+
+### Added
+
+- Activity log in the admin tool: a bounded log of the 200 most recent events, shown at
+  the bottom of the admin page in a fixed-height, scrollable table (newest first). Logged
+  events are membership applications (who applied), the admin's approve/reject decision,
+  recipient deletions, and list requests by already-approved members. Entries are stored
+  in a new `logs` table and pruned to the newest 200 on each insert.
+- List stats on the main page: below the info card, the current number of entries and the
+  date of the last update are shown as a localised line (e.g. "No. of entries: 8. Last
+  update: 30.08.2026."). Hidden while the list is empty.
+- `APP_TIMEZONE` setting: timezone used to display stored timestamps (the admin activity
+  log and the main-page "last update" date). Any PHP timezone identifier, e.g.
+  `Europe/Berlin`. Timestamps are stored in UTC and converted for display; when unset or
+  invalid, the server's default timezone is used.
+
+### Changed
+
+- Recipient list emails now list public notes in a separate section below the addresses,
+  under a divider, instead of appending them inline after each address. This keeps the
+  address block clean so it can be copied straight into an email client. Each note line
+  has the form `Name (email): note`, and only recipients that have a public note appear.
+  The CSV attachment is unchanged and still carries the note column.
+- `formatDate()` now honours the timezone carried by a `DateTimeInterface` argument
+  (previously the `intl` formatter ignored it and used PHP's default timezone), so
+  timezone-converted values format on the correct local calendar day. Bare Unix-timestamp
+  callers are unaffected.
+
 ## [1.0.0] - 2026-08-30
 
 ### Added

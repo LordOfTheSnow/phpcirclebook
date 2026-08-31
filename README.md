@@ -1,6 +1,6 @@
 # PHPCircleBook
 
-[![Version](https://img.shields.io/badge/version-1.0.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](CHANGELOG.md)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg?logo=php&logoColor=white)](https://www.php.net/)
 [![SQLite](https://img.shields.io/badge/SQLite-embedded-003B57.svg?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![No build step](https://img.shields.io/badge/build-none-brightgreen.svg)](#requirements)
@@ -10,10 +10,15 @@ A self-contained PHP contact directory with admin-gated registration and self-se
 
 Members of a group (alumni, clubs, communities) can apply to join. Once approved by the admin, they can request the contact list of all other members. The everyday flow runs entirely over email — no login required — with an optional password-protected admin tool for direct recipient management when you need it.
 
+![PHPCircleBook main page — info card with list stats, registration form, and an optional sidebar with events and links](docs/images/screenshot.png)
+
 ## Features
 
 - Admin-gated registration via email approval links
-- Self-service list retrieval for approved recipients (with CSV attachment)
+- Self-service list retrieval for approved recipients (with CSV attachment). Public notes are listed separately, below the addresses, so the recipient block stays clean to copy-paste
+- List stats on the main page: current number of entries and the date of the last update, shown under the info card
+- Activity log in the admin tool: the 200 most recent events (applications, approvals, rejections, deletions, list requests), newest first, in a scrollable table
+- Configurable display timezone for stored timestamps (via `APP_TIMEZONE` in `.env`)
 - Configurable info card on the main page (via `APP_DESCRIPTION` in `.env`)
 - Optional footer line on the main form (via `APP_FOOTER` in `.env`)
 - Optional sidebar on the main form with "Upcoming events" and "Links" cards, written in Markdown (see [Sidebar](#sidebar))
@@ -123,6 +128,9 @@ ADMIN_EMAIL="admin@example.com"
 HMAC_SECRET="generate-a-long-random-string-here"
 DB_PATH="data/mailinglist.db"
 APP_LOCALE="en_US"
+# Optional. Timezone for displaying stored timestamps (any PHP timezone identifier,
+# e.g. "Europe/Berlin"). Stored in UTC; falls back to the server timezone when unset.
+APP_TIMEZONE="Europe/Berlin"
 APP_DESCRIPTION="Describe your mailing list here. This text is shown to visitors on the main page."
 
 # Optional. A footer line shown at the bottom of the main form. Leave empty to hide it.
@@ -184,6 +192,7 @@ test the full email flow locally.
 | `HMAC_SECRET` | Secret key for unsubscribe token generation |
 | `DB_PATH` | Path to SQLite database file (relative to project root) |
 | `APP_LOCALE` | ICU locale code (e.g. `de_DE`, `en_US`, `fr_FR`) |
+| `APP_TIMEZONE` | Optional. Timezone for displaying stored timestamps (e.g. the admin activity log and the main-page "last update" date). Any PHP timezone identifier, e.g. `Europe/Berlin`. Timestamps are stored in UTC and converted to this zone for display; when unset or invalid, the server's default timezone is used |
 | `APP_DESCRIPTION` | Custom text shown on the info card (optional, can be left empty) |
 | `APP_FOOTER` | Footer line shown at the bottom of the main form (optional, can be left empty) |
 | `SIDEBAR_SIDE` | Which side of the main form the sidebar appears on: `left` or `right` (optional, defaults to `right`). See [Sidebar](#sidebar) |
@@ -338,7 +347,7 @@ phpcirclebook/
 │   ├── TokenService.php    # Approval + unsubscribe token generation
 │   ├── Translator.php      # Translation loader with fallback
 │   ├── SidebarContent.php  # Renders sidebar Markdown content files (safe mode)
-│   └── helpers.php         # app_version(), __(), formatDate(), formatNumber(), obfuscateEmail()
+│   └── helpers.php         # app_version(), __(), formatDate(), formatNumber(), appTimezone(), formatLocalTime(), logActor(), obfuscateEmail()
 ├── templates/              # PHP templates (form, layout, message, unsubscribe)
 ├── lang/                   # Translation files (one PHP array per locale)
 ├── content/                # Optional sidebar Markdown (events.md, links.md); *.md.example ship as templates

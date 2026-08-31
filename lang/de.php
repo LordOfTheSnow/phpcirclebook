@@ -5,8 +5,9 @@ declare(strict_types=1);
 return [
     // --- Info-Karte (templates/form.php) ---
     'info.title'             => 'Was ist das?',
-    'info.intro'             => 'Diese App verwaltet eine gemeinsame Mailingliste.',
+    'info.intro'             => 'Diese App verwaltet eine gemeinsame EMail-Liste.',
     'info.how_it_works'      => 'Gib deine E-Mail-Adresse ein, um die aktuelle Empfängerliste anzufordern. Falls du noch kein Mitglied bist, wird ein Administrator deine Anfrage prüfen. Nach der Genehmigung kannst du die Liste jederzeit anfordern oder dich abmelden.',
+    'info.stats'             => 'Anzahl der Einträge: {count}. Letzte Aktualisierung: {date}.',
     'info.contact'           => 'Etwas funktioniert nicht? <a href="mailto:{email}">Kontaktiere den Administrator</a>.',
 
     // --- Formular (templates/form.php) ---
@@ -50,6 +51,7 @@ return [
     'mail.list_subject'      => '[{appName}] Empfängerliste',
     'mail.list_intro'        => 'Hier ist die aktuelle Empfängerliste für [{appName}]:',
     'mail.list_total'        => 'Insgesamt: {count} Empfänger',
+    'mail.list_notes_heading' => 'Anmerkungen:',
     'mail.list_unsubscribe'  => 'Um dich von dieser Liste abzumelden:',
 
     'mail.csv_header_public_note' => 'Öffentliche Notiz',

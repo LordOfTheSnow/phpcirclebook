@@ -4,6 +4,18 @@
     <?php if (!empty($appDescription)): ?>
         <p><?= htmlspecialchars($appDescription) ?></p>
     <?php endif; ?>
+    <?php if (!empty($listStats) && $listStats['count'] > 0): ?>
+        <?php
+            // updated_at is stored as a UTC 'YYYY-MM-DD HH:MM:SS' string by SQLite;
+            // convert to the configured app timezone (APP_TIMEZONE) for display.
+            $lastUpdate = (new \DateTimeImmutable($listStats['last_update'], new \DateTimeZone('UTC')))
+                ->setTimezone(appTimezone());
+        ?>
+        <p><small><?= htmlspecialchars(__('info.stats', [
+            'count' => formatNumber($listStats['count']),
+            'date' => formatDate($lastUpdate),
+        ])) ?></small></p>
+    <?php endif; ?>
     <p><?= __('info.how_it_works') ?></p>
     <p class="disclaimer"><small><strong><span class="disclaimer-icon" aria-hidden="true">&#9888;&#65039;</span><?= __('form.disclaimer') ?></strong></small></p>
     <footer><small><?= __('info.contact', ['email' => obfuscateEmail($adminEmail)]) ?></small></footer>
