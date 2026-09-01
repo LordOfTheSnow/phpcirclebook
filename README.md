@@ -1,6 +1,6 @@
 # PHPCircleBook
 
-[![Version](https://img.shields.io/badge/version-1.1.0-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](CHANGELOG.md)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg?logo=php&logoColor=white)](https://www.php.net/)
 [![SQLite](https://img.shields.io/badge/SQLite-embedded-003B57.svg?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![No build step](https://img.shields.io/badge/build-none-brightgreen.svg)](#requirements)

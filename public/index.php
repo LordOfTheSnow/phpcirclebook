@@ -236,7 +236,9 @@ function handleConfirmUnsubscribe(): void
         return;
     }
 
+    $recipient = $db->findRecipientByEmail($email);
     $db->deleteRecipientByEmail($email);
+    $db->addLog('unsubscribed', logActor($email, $recipient['name'] ?? null) . ' unsubscribed');
     renderMessage(__('message.unsubscribed'));
 }
 
