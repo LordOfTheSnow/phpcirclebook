@@ -433,7 +433,7 @@ function render_list(): void
     $token = e(csrf_token());
 
     $flash = flash_message();
-    $logSection = render_log_section();
+    $logModal = render_log_modal();
 
     $rows = '';
     if ($recipients === []) {
@@ -465,7 +465,8 @@ function render_list(): void
 {$flash}
 <div style="display:flex; justify-content:space-between; align-items:center;">
     <h2 style="margin:0;">Recipients</h2>
-    <div>
+    <div style="display:flex; gap:0.5rem; flex-wrap:wrap;">
+        <a role="button" class="secondary outline" id="logs-open-btn" href="#">Logs</a>
         <a href="admin.php?action=add" role="button">Add recipient</a>
         <a href="admin.php?action=logout" role="button" class="secondary">Log out</a>
     </div>
@@ -480,18 +481,17 @@ function render_list(): void
     </tbody>
 </table>
 </figure>
-{$logSection}
+{$logModal}
 HTML;
 
     render_page('Admin', $body);
 }
 
 /**
- * Activity log shown at the bottom of the admin list, newest entry first, in a
- * fixed-height scrollable container. Renders nothing but an empty-state row when
- * there are no entries yet.
+ * Activity log rendered as a <dialog> modal, opened by the "Logs" button.
+ * Newest entry first, in a fixed-height scrollable container.
  */
-function render_log_section(): string
+function render_log_modal(): string
 {
     global $db;
 
@@ -515,17 +515,68 @@ function render_log_section(): string
     }
 
     return <<<HTML
-<h2 style="margin-top:2.5rem;">Activity log</h2>
-<div class="log-scroll">
-<table class="admin-table">
-    <thead>
-        <tr><th>When</th><th>Event</th><th>Detail</th></tr>
-    </thead>
-    <tbody>
-        {$rows}
-    </tbody>
-</table>
+<!-- Logs overlay (custom div instead of <dialog> to avoid Pico width overrides) -->
+<div id="logs-overlay" role="dialog" aria-modal="true" aria-labelledby="logs-modal-title" hidden
+     style="position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.5);">
+    <div id="logs-panel"
+         style="background:#fff;border-radius:10px;width:85vw;max-width:85vw;height:85vh;max-height:85vh;display:flex;flex-direction:column;box-shadow:0 8px 32px rgba(0,0,0,0.25);overflow:hidden;">
+        <div style="display:flex;justify-content:space-between;align-items:center;padding:1rem 1.25rem;border-bottom:1px solid #dfe4ea;">
+            <strong id="logs-modal-title" style="font-size:1.1rem;">Activity log</strong>
+            <button type="button" id="logs-close-btn" aria-label="Close logs"
+                    style="width:auto;background:none;border:1px solid #ccc;border-radius:6px;padding:0.15rem 0.6rem;font-size:1.1rem;line-height:1.4;cursor:pointer;color:#444;">&times;</button>
+        </div>
+        <div class="log-scroll" style="flex:1;min-height:0;overflow-y:auto;padding:0;">
+            <table class="admin-table">
+                <thead>
+                    <tr><th>When</th><th>Event</th><th>Detail</th></tr>
+                </thead>
+                <tbody>
+                    {$rows}
+                </tbody>
+            </table>
+        </div>
+    </div>
 </div>
+<script>
+    (function () {
+        var overlay = document.getElementById('logs-overlay');
+        var panel   = document.getElementById('logs-panel');
+        var openBtn = document.getElementById('logs-open-btn');
+        var closeBtn = document.getElementById('logs-close-btn');
+        if (!overlay || !openBtn || !closeBtn) { return; }
+
+        function openModal() {
+            overlay.hidden = false;
+            closeBtn.focus();
+        }
+
+        function closeModal() {
+            overlay.hidden = true;
+            openBtn.focus();
+        }
+
+        openBtn.addEventListener('click', function (e) {
+            e.preventDefault();
+            openModal();
+        });
+
+        closeBtn.addEventListener('click', closeModal);
+
+        // Close on backdrop click (click outside the panel).
+        overlay.addEventListener('click', function (e) {
+            if (!panel.contains(e.target)) {
+                closeModal();
+            }
+        });
+
+        // Close on Escape key.
+        document.addEventListener('keydown', function (e) {
+            if (e.key === 'Escape' && !overlay.hidden) {
+                closeModal();
+            }
+        });
+    })();
+</script>
 HTML;
 }
 
@@ -793,6 +844,10 @@ function render_page(string $title, string $content): void
         .password-toggle .icon-eye-off { display: none; }
         .password-toggle[aria-pressed="true"] .icon-eye { display: none; }
         .password-toggle[aria-pressed="true"] .icon-eye-off { display: block; }
+
+        /* Logs modal. */
+        #logs-overlay { font-family: inherit; }
+        #logs-panel .log-scroll { max-height: 60vh; }
 
         /* "powered by" attribution link in the header. */
         .app-header-bar {

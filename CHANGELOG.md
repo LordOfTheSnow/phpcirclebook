@@ -8,6 +8,18 @@ project's first tagged version — 0.9.0 covers everything built so far, pre-1.0
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-09-01
+
+### Changed
+
+- Admin activity log moved from the bottom of the recipients page into a modal overlay.
+  A "Logs" button in the action bar (next to "Add recipient" and "Log out") opens the
+  overlay; it can be closed with the × button, a click on the backdrop, or the Escape
+  key. The overlay is 85 % of the viewport width and scrolls vertically when the log
+  contains more entries than fit on screen, with the column header remaining sticky.
+- Unsubscribe events are now recorded in the activity log (`unsubscribed` event) when a
+  recipient removes themselves via the unsubscribe link.
+
 ## [1.1.0] - 2026-08-31
 
 ### Added
