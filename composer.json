@@ -2,7 +2,7 @@
     "name": "phpcirclebook/app",
     "description": "Self-contained PHP contact directory with admin-gated registration",
     "type": "project",
-    "version": "1.1.1",
+    "version": "1.1.2",
     "license": "MIT",
     "authors": [
         {

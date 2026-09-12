@@ -129,10 +129,10 @@ final class Mailer
                 $registeredAt = $ts !== false ? formatDate($ts) : $r['created_at'];
             }
             fputcsv($handle, [
-                $r['email'],
-                $r['name'] ?? '',
-                $r['public_note'] ?? '',
-                $r['tags'] ?? '',
+                $this->escapeCsvFormula($r['email']),
+                $this->escapeCsvFormula($r['name'] ?? ''),
+                $this->escapeCsvFormula($r['public_note'] ?? ''),
+                $this->escapeCsvFormula($r['tags'] ?? ''),
                 $registeredAt,
             ]);
         }
@@ -145,15 +145,36 @@ final class Mailer
     }
 
     /**
+     * Neutralise CSV/spreadsheet formula injection.
+     *
+     * Recipient fields (name, public_note, tags) can contain arbitrary
+     * registrant-supplied text, and this CSV is opened by other recipients in
+     * Excel/Sheets. A value starting with =, +, -, @, tab, or CR is interpreted
+     * there as a formula (e.g. =HYPERLINK(...) or a legacy DDE payload), so we
+     * prefix such values with a leading apostrophe, which spreadsheet
+     * applications render as literal text instead of evaluating it.
+     */
+    private function escapeCsvFormula(string $value): string
+    {
+        if ($value !== '' && str_contains("=+-@\t\r", $value[0])) {
+            return "'" . $value;
+        }
+
+        return $value;
+    }
+
+    /**
      * Send an email with a file attachment using multipart/mixed MIME.
      */
     private function sendWithAttachment(string $to, string $subject, string $body, string $attachmentContent, string $attachmentFilename): bool
     {
-        $subject = $this->sanitizeHeaderValue($subject);
+        $body = $this->appendFooter($body);
+        $subject = $this->encodeHeaderValue($subject);
+        $fromName = $this->encodeHeaderValue($this->appName);
         $boundary = md5(uniqid((string) time()));
 
         $headers = [
-            "From: {$this->appName} <{$this->adminEmail}>",
+            "From: {$fromName} <{$this->adminEmail}>",
             "Reply-To: {$this->adminEmail}",
             "MIME-Version: 1.0",
             "Content-Type: multipart/mixed; boundary=\"{$boundary}\"",
@@ -177,9 +198,11 @@ final class Mailer
 
     private function send(string $to, string $subject, string $body): bool
     {
-        $subject = $this->sanitizeHeaderValue($subject);
+        $body = $this->appendFooter($body);
+        $subject = $this->encodeHeaderValue($subject);
+        $fromName = $this->encodeHeaderValue($this->appName);
         $headers = [
-            "From: {$this->appName} <{$this->adminEmail}>",
+            "From: {$fromName} <{$this->adminEmail}>",
             "Reply-To: {$this->adminEmail}",
             "Content-Type: text/plain; charset=UTF-8",
         ];
@@ -188,16 +211,39 @@ final class Mailer
     }
 
     /**
-     * Neutralise header injection.
-     *
-     * The subject is placed in the mail header block by mail(), so any CR/LF a
-     * caller may have folded in from user-supplied data (e.g. a registrant's
-     * name) could inject additional headers (Bcc/Cc) or body content. Subjects
-     * are single-line by definition, so we strip every CR and LF. Applied at the
-     * lowest level so all current and future callers are covered.
+     * Append the standard footer (a separator line plus APP_NAME wrapping the
+     * configured APP_URL) to a message body. Applied at the lowest level so it
+     * covers every outgoing mail (list, approval request, confirmation)
+     * regardless of caller.
      */
-    private function sanitizeHeaderValue(string $value): string
+    private function appendFooter(string $body): string
     {
-        return str_replace(["\r", "\n"], '', $value);
+        $footer = __('mail.footer', ['appName' => $this->appName, 'url' => $this->appUrl]);
+
+        return $body . "\n---\n" . $footer . "\n";
+    }
+
+    /**
+     * Sanitise and MIME-encode a value for use in a mail header (Subject, or a
+     * From display name).
+     *
+     * Strips CR/LF first to neutralise header injection: the value is placed in
+     * the mail header block by mail(), so any CR/LF folded in from user-supplied
+     * data (e.g. a registrant's name) could otherwise inject additional headers
+     * (Bcc/Cc) or body content. Header values are single-line by definition, so
+     * every CR and LF is removed outright.
+     *
+     * Then RFC 2047-encodes the result (mb_encode_mimeheader, base64 scheme).
+     * Some receiving MTAs (observed: secure-mailgate.com) reject a Subject
+     * containing raw non-ASCII bytes outright ("550 Subject contains invalid
+     * characters"), even though headers are otherwise 8bit-clean; encoding
+     * avoids relying on the recipient's tolerance for unencoded UTF-8 headers.
+     * Pure-ASCII values pass through unchanged.
+     */
+    private function encodeHeaderValue(string $value): string
+    {
+        $value = str_replace(["\r", "\n"], '', $value);
+
+        return mb_encode_mimeheader($value, 'UTF-8', 'B', "\r\n");
     }
 }

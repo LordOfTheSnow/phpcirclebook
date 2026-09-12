@@ -8,6 +8,39 @@ project's first tagged version — 0.9.0 covers everything built so far, pre-1.0
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-09-12
+
+### Added
+
+- Outgoing emails (recipient list, admin approval request, approval confirmation) now end
+  with a translatable footer naming the app and its `APP_URL`, e.g. "Originated by My
+  Mailing List (https://list.example.com)" (`mail.footer` in `lang/`).
+- Optional `TRUST_PROXY` setting (`.env`): when the app runs behind a single trusted
+  reverse proxy or load balancer, the client IP used for rate limiting is read from the
+  `X-Forwarded-For` header instead of the proxy's own address. Left `false` by default.
+
+### Fixed
+
+- Mail subjects and the `From` display name are now RFC 2047 MIME-encoded
+  (`Mailer::encodeHeaderValue()`) instead of sent as raw UTF-8. Some receiving mail
+  servers rejected non-ASCII subjects outright ("550 Subject contains invalid
+  characters"), even though most tolerate raw UTF-8 headers.
+- The web admin tool now shows a warning (instead of failing silently) when a status
+  change to "approved" triggers a confirmation email that can't be sent, matching the
+  CLI tool's existing behaviour.
+
+### Security
+
+- Fixed a CSV/spreadsheet formula injection vector: the `name`, `public_note`, and `tags`
+  fields in the mailed recipient-list CSV attachment are now escaped (a leading `=`, `+`,
+  `-`, `@`, tab, or carriage return is prefixed with `'`), so a registrant-supplied value
+  can no longer be interpreted as a formula (e.g. `=HYPERLINK(...)`) by Excel or Sheets.
+- Pico CSS is now loaded from the CDN pinned to an exact version with a Subresource
+  Integrity hash, instead of a floating `@2` tag with no integrity check.
+- The admin tool now sends `X-Frame-Options: DENY` and a `frame-ancestors 'none'` CSP
+  directive, preventing the login page from being framed for clickjacking / UI-redressing
+  attacks.
+
 ## [1.1.1] - 2026-09-01
 
 ### Changed

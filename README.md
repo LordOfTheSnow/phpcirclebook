@@ -1,6 +1,6 @@
 # PHPCircleBook
 
-[![Version](https://img.shields.io/badge/version-1.1.1-blue.svg)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.2-blue.svg)](CHANGELOG.md)
 [![PHP](https://img.shields.io/badge/PHP-8.2%2B-777BB4.svg?logo=php&logoColor=white)](https://www.php.net/)
 [![SQLite](https://img.shields.io/badge/SQLite-embedded-003B57.svg?logo=sqlite&logoColor=white)](https://www.sqlite.org/)
 [![No build step](https://img.shields.io/badge/build-none-brightgreen.svg)](#requirements)
@@ -143,6 +143,9 @@ SIDEBAR_SIDE="right"
 # Optional. Logo left of the app name (a filename served from public/, or an https URL).
 # Defaults to the shipped favicon.svg; leave empty to show no logo.
 APP_LOGO="favicon.svg"
+# Optional. Enable only behind a single trusted reverse proxy or load balancer, so
+# rate limiting uses the real client IP (X-Forwarded-For) instead of the proxy's own.
+TRUST_PROXY=false
 
 # Admin tool (public/admin.php) — see the "Admin tool" section below.
 # Required only if you use the web admin. Generate with: php bin/hash-password.php
@@ -197,6 +200,7 @@ test the full email flow locally.
 | `APP_FOOTER` | Footer line shown at the bottom of the main form (optional, can be left empty) |
 | `SIDEBAR_SIDE` | Which side of the main form the sidebar appears on: `left` or `right` (optional, defaults to `right`). See [Sidebar](#sidebar) |
 | `APP_LOGO` | Optional logo shown left of the app name in the header. A filename served from `public/` (e.g. `logo.png`) or an absolute `https` URL. Auto-scales to the header height (may exceed it by up to 40px). Defaults to the shipped `favicon.svg`; leave empty for no logo |
+| `TRUST_PROXY` | Optional. Enable only when the app sits behind a single trusted reverse proxy or load balancer (e.g. Cloudflare, nginx). When `true`, the client IP used for rate limiting is read from `X-Forwarded-For` instead of the direct TCP connection. Leave `false` for a normal setup with no proxy in front — enabling it without one lets a client forge its own IP and bypass rate limiting |
 | `ADMIN_PASSWORD_HASH` | bcrypt hash of the admin password for the web admin tool (see [Admin tool](#admin-tool)). Required only if you use `public/admin.php` |
 | `ADMIN_FORCE_SECURE_COOKIE` | Optional. Force the admin session cookie to `Secure` when your host terminates TLS at an upstream proxy and forwards plain HTTP to PHP. Leave unset (`false`) for normal setups |
 
@@ -447,6 +451,39 @@ creates the `vx.y.z` tag and a GitHub Release (with notes taken from the CHANGEL
 section), then triggers [`Build FTP release zip`](.github/workflows/ftp-release-zip.yml),
 which installs production dependencies and attaches the `phpcirclebook-ftp-<version>.zip`
 asset to the release. If the version already has a tag, the push is a no-op.
+
+### Updating the pinned CDN assets
+
+`templates/layout.php` and `public/admin.php` load Pico CSS from jsdelivr pinned to an
+exact version with a Subresource Integrity (SRI) hash, e.g.:
+
+```html
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css"
+      integrity="sha384-..." crossorigin="anonymous">
+```
+
+This is deliberate — an unpinned `@2` tag or a missing `integrity` attribute would let a
+compromised CDN response serve different CSS to every visitor unnoticed, including the
+admin login page's password field. The tradeoff is that this pin never updates itself, so
+it needs a periodic manual check (e.g. alongside a release) or automation:
+
+- **Manual:** check the [Pico CSS releases page](https://github.com/picocss/pico/releases)
+  for a newer 2.x version, then regenerate the hash:
+  ```bash
+  curl -s -o pico.min.css "https://cdn.jsdelivr.net/npm/@picocss/pico@<new-version>/css/pico.min.css"
+  openssl dgst -sha384 -binary pico.min.css | openssl base64 -A
+  ```
+  and update the version number and `integrity` value in both files.
+- **Automated (not yet set up):** [Renovate](https://docs.renovatebot.com/) can track this
+  kind of pinned-version-plus-hash pattern via a custom manager, opening a PR whenever a
+  new Pico release appears — something Dependabot can't do since it only understands
+  package-manifest ecosystems, not values embedded in HTML. Two ways to run it, neither
+  requiring anything local:
+  - Install the [Renovate GitHub App](https://github.com/apps/renovate) (hosted by Mend,
+    free for public repos) — zero-maintenance once a `renovate.json` config is committed.
+  - Self-host it as a scheduled job using [`renovatebot/github-action`](https://github.com/renovatebot/github-action)
+    alongside the existing workflows in `.github/workflows/`, if granting a third-party
+    app repo access is undesirable.
 
 ## License
 

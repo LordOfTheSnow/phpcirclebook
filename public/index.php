@@ -108,7 +108,7 @@ function handleSubmit(): void
         return;
     }
 
-    $ip = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    $ip = clientIp();
 
     // Rate limiting
     if ($rateLimiter->isIpLimited($ip) || $rateLimiter->isEmailLimited($email)) {

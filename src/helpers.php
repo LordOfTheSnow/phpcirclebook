@@ -185,6 +185,42 @@ function logActor(string $email, ?string $name = null): string
 }
 
 /**
+ * Resolve the client IP address used for rate limiting.
+ *
+ * By default this is $_SERVER['REMOTE_ADDR']. When TRUST_PROXY is enabled in
+ * .env (for a deployment behind a single reverse proxy / load balancer), the
+ * real client IP is instead taken from the X-Forwarded-For header — otherwise
+ * every visitor would share the proxy's own IP and throttle each other via the
+ * IP-based rate limits (see App\RateLimiter).
+ *
+ * X-Forwarded-For is a comma-separated list that grows by one entry per proxy
+ * hop, appended by each hop rather than replaced. With exactly one trusted
+ * proxy directly in front of PHP, the last entry is the IP that connected to
+ * that proxy — the one entry a client cannot spoof by sending its own
+ * X-Forwarded-For header (earlier entries may be attacker-supplied). Only
+ * enable TRUST_PROXY when such a single trusted proxy is guaranteed to be
+ * present; otherwise a client could forge this header directly.
+ */
+function clientIp(): string
+{
+    $remoteAddr = $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+
+    if (!filter_var($_ENV['TRUST_PROXY'] ?? false, FILTER_VALIDATE_BOOL)) {
+        return $remoteAddr;
+    }
+
+    $forwardedFor = trim((string) ($_SERVER['HTTP_X_FORWARDED_FOR'] ?? ''));
+    if ($forwardedFor === '') {
+        return $remoteAddr;
+    }
+
+    $parts = array_map('trim', explode(',', $forwardedFor));
+    $candidate = end($parts);
+
+    return filter_var($candidate, FILTER_VALIDATE_IP) ?: $remoteAddr;
+}
+
+/**
  * Obfuscate an email address by encoding each character as an HTML numeric entity.
  *
  * This deters simple regex-based email harvesters while remaining fully readable

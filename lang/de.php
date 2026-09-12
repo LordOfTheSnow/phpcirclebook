@@ -74,4 +74,7 @@ return [
     'mail.confirm_body'      => 'Deine Registrierung für {appName} wurde genehmigt.',
     'mail.confirm_instructions' => 'Du kannst ab sofort die folgende Seite besuchen und jederzeit die Empfängerliste anfordern:',
     'mail.confirm_unsub'     => 'Zum Abmelden:',
+
+    // --- E-Mail: Fußzeile (an jede ausgehende Mail angehängt) ---
+    'mail.footer'            => 'Erstellt von {appName} ({url})',
 ];

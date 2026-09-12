@@ -74,4 +74,7 @@ return [
     'mail.confirm_body'      => 'Your registration for {appName} has been approved.',
     'mail.confirm_instructions' => 'You can now visit the following page and request the recipient list at any time:',
     'mail.confirm_unsub'     => 'To unsubscribe:',
+
+    // --- Email: footer (appended to every outgoing mail) ---
+    'mail.footer'            => 'Originated by {appName} ({url})',
 ];

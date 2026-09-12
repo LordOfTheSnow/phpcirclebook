@@ -16,6 +16,11 @@ declare(strict_types=1);
 require __DIR__ . '/../vendor/autoload.php';
 require __DIR__ . '/../src/helpers.php';
 
+// Clickjacking defense: the login form must never be framed by another site
+// for UI-redressing attacks against the admin password.
+header('X-Frame-Options: DENY');
+header("Content-Security-Policy: frame-ancestors 'none'");
+
 use App\Database;
 use App\DuplicateEmailException;
 use App\Mailer;
@@ -85,7 +90,7 @@ session_start();
 
 function admin_ip(): string
 {
-    return $_SERVER['REMOTE_ADDR'] ?? '0.0.0.0';
+    return clientIp();
 }
 
 function is_logged_in(): bool
@@ -325,8 +330,9 @@ function handle_edit(): void
     }
 
     // Send the confirmation email when transitioning into approved (ADR-003 #11).
-    if ($nowApproved && !$wasApproved) {
-        $mailer->sendApprovalConfirmation($email, $fields['name']);
+    if ($nowApproved && !$wasApproved && !$mailer->sendApprovalConfirmation($email, $fields['name'])) {
+        redirect_admin('msg=saved_mail_failed');
+        return;
     }
 
     redirect_admin('msg=saved');
@@ -351,8 +357,10 @@ function handle_status(): void
     $wasApproved = $recipient['status'] === 'approved';
     $db->updateRecipient($id, ['status' => $newStatus]);
 
-    if ($newStatus === 'approved' && !$wasApproved) {
-        $mailer->sendApprovalConfirmation($recipient['email'], $recipient['name']);
+    if ($newStatus === 'approved' && !$wasApproved
+        && !$mailer->sendApprovalConfirmation($recipient['email'], $recipient['name'])) {
+        redirect_admin('msg=status_mail_failed');
+        return;
     }
 
     redirect_admin('msg=status');
@@ -712,16 +720,20 @@ function flash_message(): string
 {
     $msg = $_GET['msg'] ?? '';
     $map = [
-        'added'    => 'Recipient added.',
-        'saved'    => 'Changes saved.',
-        'deleted'  => 'Recipient deleted.',
-        'status'   => 'Status updated.',
-        'notfound' => 'Recipient not found.',
+        'added'             => 'Recipient added.',
+        'saved'             => 'Changes saved.',
+        'deleted'           => 'Recipient deleted.',
+        'status'            => 'Status updated.',
+        'notfound'          => 'Recipient not found.',
+        'saved_mail_failed'  => 'Changes saved, but the confirmation email could not be sent. Check the mail configuration.',
+        'status_mail_failed' => 'Status updated, but the confirmation email could not be sent. Check the mail configuration.',
     ];
     if (!isset($map[$msg])) {
         return '';
     }
-    return '<p style="color:#2e7d32; font-weight:600;">' . e($map[$msg]) . '</p>';
+    $warning = str_ends_with($msg, '_mail_failed');
+    $color = $warning ? '#b26a00' : '#2e7d32';
+    return '<p style="color:' . $color . '; font-weight:600;">' . e($map[$msg]) . '</p>';
 }
 
 function render_page(string $title, string $content): void
@@ -742,7 +754,8 @@ function render_page(string $title, string $content): void
     <meta name="robots" content="noindex, nofollow">
     <title>{$pageTitle}</title>
     <link rel="icon" type="image/svg+xml" href="favicon.svg">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2/css/pico.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/@picocss/pico@2.1.1/css/pico.min.css"
+          integrity="sha384-L1dWfspMTHU/ApYnFiMz2QID/PlP1xCW9visvBdbEkOLkSSWsP6ZJWhPw6apiXxU" crossorigin="anonymous">
     <style>
         /*
          * Pico styles buttons and form controls as full-width block elements. In the
